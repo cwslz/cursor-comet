@@ -471,7 +471,7 @@ namespace MouseTrail
 
         private void ShowAbout()
         {
-            string text = "鼠标拖尾 v1.0" + Environment.NewLine + Environment.NewLine;
+            string text = "鼠标拖尾 v1.1.0" + Environment.NewLine + Environment.NewLine;
             text += "Ctrl + Alt + T  开关特效" + Environment.NewLine;
             text += "右键（或左键）托盘图标可以切换样式、颜色、粗细和时长。" + Environment.NewLine + Environment.NewLine;
             if (!_hotkeyRegistered)

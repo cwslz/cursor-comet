@@ -54,3 +54,35 @@ Copy-Item $exePath $artifact -Force
 Write-Host ''
 Write-Host "编译完成：$exePath"
 Write-Host "发布文件：$artifact"
+
+# 编译安装器，并把便携版 exe 作为资源嵌进去。
+$setupSource = Join-Path $root 'installer\Setup.cs'
+if (Test-Path $setupSource) {
+    $setupPath = Join-Path $dist 'CursorComet-Setup.exe'
+    $setupArgs = @(
+        '/nologo',
+        '/target:winexe',
+        '/platform:anycpu',
+        '/optimize+',
+        '/codepage:65001',
+        '/utf8output',
+        '/reference:System.dll',
+        '/reference:System.Drawing.dll',
+        '/reference:System.Windows.Forms.dll',
+        "/resource:$artifact,CursorCometApp.exe",
+        "/out:$setupPath"
+    )
+    if (Test-Path $icon) {
+        $setupArgs += "/win32icon:$icon"
+    }
+    if (Test-Path $manifest) {
+        $setupArgs += "/win32manifest:$manifest"
+    }
+    $setupArgs += $setupSource
+
+    & $csc $setupArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "安装器编译失败，退出码 $LASTEXITCODE"
+    }
+    Write-Host "安装包：$setupPath"
+}

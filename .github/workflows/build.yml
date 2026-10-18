@@ -26,12 +26,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cursor-comet
-          path: dist/cursor-comet.exe
+          path: |
+            dist/cursor-comet.exe
+            dist/CursorComet-Setup.exe
 
       - name: Create release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           name: Cursor Comet ${{ github.ref_name }}
-          files: dist/cursor-comet.exe
+          files: |
+            dist/cursor-comet.exe
+            dist/CursorComet-Setup.exe
           generate_release_notes: true

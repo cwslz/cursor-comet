@@ -1,4 +1,4 @@
-# 鼠标拖尾
+# 鼠标拖尾（Cursor Comet）
 
 一个轻量的 Windows 鼠标轨迹特效小工具：透明覆盖层跟随鼠标，画出带光晕的拖尾，**不挡点击、不抢焦点**。
 
@@ -6,11 +6,20 @@
 
 ## 下载 / 快速开始
 
-从 [Releases](https://github.com/cwslz/cursor-comet/releases/latest) 下载 `cursor-comet.exe`，双击运行。
+### 安装版（推荐）
 
-- 需要 Windows 10 / 11，系统自带 .NET Framework 4.8；
-- 也可以克隆仓库后运行 `build.ps1` 自行编译，输出在 `dist\鼠标拖尾.exe`；
-- exe 未签名，SmartScreen 可能提示，点“更多信息 → 仍要运行”即可。
+从 [Releases](https://github.com/cwslz/cursor-comet/releases/latest) 下载 `CursorComet-Setup.exe`，双击安装。
+
+- 默认安装到 `%LOCALAPPDATA%\Programs\CursorComet`，不需要管理员权限；
+- 自动创建开始菜单快捷方式，可选桌面快捷方式；
+- 在“设置 → 应用 → 已安装的应用”里可以卸载；
+- 安装器里已经包含主程序，不需要另外下载 exe。
+
+### 便携版
+
+下载 `cursor-comet.exe`，双击运行，不会写入安装目录；配置文件仍然在 `%APPDATA%\MouseTrail`。
+
+需要 Windows 10 / 11，系统自带 .NET Framework 4.8。exe 未签名，SmartScreen 可能提示，点“更多信息 → 仍要运行”即可。也可以克隆仓库后运行 `build.ps1` 自行编译。
 
 启动后没有主窗口，只在屏幕右下角托盘出现图标。移动鼠标就能看到拖尾。
 
@@ -31,7 +40,8 @@
 
 ## 特性
 
-- 单文件 exe（约 50 KB），不需要安装 Python、Node 或 .NET SDK，使用 Windows 自带的 .NET Framework 4.8
+- 便携版是单文件 exe（约 52 KB）；安装版是一个约 90 KB 的安装器，内部已包含主程序
+- 不需要安装 Python、Node 或 .NET SDK，使用 Windows 自带的 .NET Framework 4.8
 - 逐像素透明 + 鼠标穿透（`WS_EX_LAYERED | WS_EX_TRANSPARENT`），正常点击、拖拽、输入不受影响
 - 覆盖整个屏幕的透明窗口，轨迹按**固定时间**淡出：高速移动时拖尾自然变长，不会被窗口裁剪或断尾
 - 支持高 DPI 缩放，拖尾粗细会按系统 DPI 自动换算
@@ -68,7 +78,13 @@ showtip=0
 .\build.ps1
 ```
 
-脚本会把 `src\*.cs` 编译成 `dist\鼠标拖尾.exe`，并嵌入 `assets\app.ico` 和 `assets\app.manifest`。
+脚本会编译：
+
+- `dist\鼠标拖尾.exe`（中文文件名）
+- `dist\cursor-comet.exe`（Release 用的 ASCII 文件名）
+- `dist\CursorComet-Setup.exe`（安装器，内嵌上面的便携版）
+
+并嵌入 `assets\app.ico` 和 `assets\app.manifest`。
 
 改图标后可以重新生成多尺寸 ico：
 
@@ -81,7 +97,9 @@ showtip=0
 ```
 cursor-comet/
 ├─ dist/                   # 本地编译输出，发布时用 Releases
-│  └─ 鼠标拖尾.exe
+│  ├─ 鼠标拖尾.exe
+│  ├─ cursor-comet.exe
+│  └─ CursorComet-Setup.exe
 ├─ src/                    # C# 源码
 │  ├─ Program.cs           # 入口、单实例、DPI
 │  ├─ TrailForm.cs         # 覆盖窗口、托盘、热键、菜单
@@ -93,6 +111,8 @@ cursor-comet/
 │  ├─ IconFactory.cs       # 运行时绘制图标
 │  ├─ AutoStart.cs         # 开机启动
 │  └─ Native.cs            # Win32 声明
+├─ installer/
+│  └─ Setup.cs             # 安装器源码（内嵌便携版，带卸载）
 ├─ assets/
 │  ├─ app.ico
 │  └─ app.manifest
