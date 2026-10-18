@@ -4,9 +4,13 @@
 
 ![预览](preview.png)
 
-## 直接使用
+## 下载 / 快速开始
 
-双击 `dist\鼠标拖尾.exe`（从 Releases 下载，或在本地运行 `build.ps1` 生成）。
+从 [Releases](https://github.com/cwslz/cursor-comet/releases/latest) 下载 `cursor-comet.exe`，双击运行。
+
+- 需要 Windows 10 / 11，系统自带 .NET Framework 4.8；
+- 也可以克隆仓库后运行 `build.ps1` 自行编译，输出在 `dist\鼠标拖尾.exe`；
+- exe 未签名，SmartScreen 可能提示，点“更多信息 → 仍要运行”即可。
 
 启动后没有主窗口，只在屏幕右下角托盘出现图标。移动鼠标就能看到拖尾。
 
@@ -92,9 +96,11 @@ cursor-comet/
 ├─ assets/
 │  ├─ app.ico
 │  └─ app.manifest
+├─ .github/workflows/build.yml   # 打 tag 自动编译并发布 Release
 ├─ tools/make-icon.ps1
 ├─ build.ps1
 ├─ preview.png
+├─ LICENSE
 └─ README.md
 ```
 
