@@ -2,6 +2,10 @@
 
 一个轻量的 Windows 鼠标轨迹特效小工具：透明覆盖层跟随鼠标，画出带光晕的拖尾，**不挡点击、不抢焦点**。
 
+[![build](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml/badge.svg)](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml)
+[![release](https://img.shields.io/github/v/release/cwslz/cursor-comet)](https://github.com/cwslz/cursor-comet/releases/latest)
+[![license](https://img.shields.io/github/license/cwslz/cursor-comet)](LICENSE)
+
 ![预览](preview.png)
 
 ## 下载 / 快速开始
@@ -154,6 +158,10 @@ cursor-comet/
 
 **想改成别的颜色 / 曲线？**
 改 `src\Palette.cs` 里的颜色，或调 `src\TrailRenderer.cs` 顶部的 `StampSpacing`、`MaxRadius`，然后重新运行 `build.ps1`。
+
+## 更新日志
+
+见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可证
 
