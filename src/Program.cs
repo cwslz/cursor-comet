@@ -7,21 +7,25 @@ namespace MouseTrail
         [STAThread]
         private static void Main()
         {
+            System.Windows.Forms.Application.EnableVisualStyles();
+            System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+
+            AppSettings settings = AppSettings.Load();
+            L10n.Set(settings.ResolveLanguage());
+
             bool createdNew;
             using (System.Threading.Mutex mutex = new System.Threading.Mutex(true, "MouseTrail_SingleInstance_7C1E", out createdNew))
             {
                 if (!createdNew)
                 {
                     System.Windows.Forms.MessageBox.Show(
-                        "鼠标拖尾已经在运行了，请查看屏幕右下角的托盘图标。",
-                        "鼠标拖尾",
+                        L10n.T("鼠标拖尾已经在运行了，请查看屏幕右下角的托盘图标。",
+                            "Cursor Comet is already running. Check the tray icon near the clock."),
+                        L10n.T("鼠标拖尾", "Cursor Comet"),
                         System.Windows.Forms.MessageBoxButtons.OK,
                         System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
-
-                System.Windows.Forms.Application.EnableVisualStyles();
-                System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
 
                 EnableDpiAwareness();
                 Native.timeBeginPeriod(1);
@@ -37,7 +41,6 @@ namespace MouseTrail
 
                 try
                 {
-                    AppSettings settings = AppSettings.Load();
                     AutoStart.RepairIfNeeded();
                     using (TrailForm form = new TrailForm(settings))
                     {
@@ -48,8 +51,8 @@ namespace MouseTrail
                 {
                     Log(ex);
                     System.Windows.Forms.MessageBox.Show(
-                        "启动失败：" + ex.Message,
-                        "鼠标拖尾",
+                        L10n.T("启动失败：", "Failed to start: ") + ex.Message,
+                        L10n.T("鼠标拖尾", "Cursor Comet"),
                         System.Windows.Forms.MessageBoxButtons.OK,
                         System.Windows.Forms.MessageBoxIcon.Error);
                 }

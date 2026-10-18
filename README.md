@@ -1,5 +1,7 @@
 # 鼠标拖尾（Cursor Comet）
 
+[English](README.en.md) | 中文
+
 一个轻量的 Windows 鼠标轨迹特效小工具：透明覆盖层跟随鼠标，画出带光晕的拖尾，**不挡点击、不抢焦点**。
 
 [![build](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml/badge.svg)](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml)
@@ -15,8 +17,9 @@
 从 [Releases](https://github.com/cwslz/cursor-comet/releases/latest) 下载 `CursorComet-Setup.exe`，双击安装。
 
 - 默认安装到 `%LOCALAPPDATA%\Programs\CursorComet`，不需要管理员权限；
+- 安装界面支持中文 / English 切换；
 - 自动创建开始菜单快捷方式，可选桌面快捷方式；
-- 在“设置 → 应用 → 已安装的应用”里可以卸载；
+- 同时安装独立的 `uninstall.exe`，在“设置 → 应用”里可以直接卸载；
 - 安装器里已经包含主程序，不需要另外下载 exe。
 
 ### 便携版
@@ -39,12 +42,14 @@
 - **颜色**：冰蓝 / 紫罗兰 / 樱花粉 / 金色 / 薄荷 / 白色
 - **粗细**：纤细 / 标准 / 醒目
 - **时长**：短（0.45 秒）/ 中（0.7 秒）/ 长（1 秒）
+- **语言 / Language**：自动 / 中文 / English
 - **开机自动启动**：写入当前用户的启动项（不需要管理员权限）
 - **恢复默认设置**
 
 ## 特性
 
-- 便携版是单文件 exe（约 52 KB）；安装版是一个约 90 KB 的安装器，内部已包含主程序
+- **中英文双语**：托盘菜单、安装器、卸载器都可以切换语言
+- 便携版是单文件 exe（约 56 KB）；安装版是一个约 140 KB 的安装器，内部已包含主程序和独立的 `uninstall.exe`
 - 不需要安装 Python、Node 或 .NET SDK，使用 Windows 自带的 .NET Framework 4.8
 - 逐像素透明 + 鼠标穿透（`WS_EX_LAYERED | WS_EX_TRANSPARENT`），正常点击、拖拽、输入不受影响
 - 覆盖整个屏幕的透明窗口，轨迹按**固定时间**淡出：高速移动时拖尾自然变长，不会被窗口裁剪或断尾
@@ -56,23 +61,34 @@
 位置：`%APPDATA%\MouseTrail\config.ini`
 
 ```ini
-# 样式：comet / rainbow / sparks / minimal
+# 样式 / Style: comet / rainbow / sparks / minimal
 style=comet
 
-# 颜色：冰蓝 / 紫罗兰 / 樱花粉 / 金色 / 薄荷 / 白色
-color=冰蓝
+# 颜色 / Color: cyan / violet / pink / gold / mint / white
+color=cyan
 
 # 0.5 ~ 2
 scale=1
 
-# 拖尾持续时间（秒），0.2 ~ 1.5
+# 拖尾持续时间（秒）/ Duration in seconds, 0.2 ~ 1.5
 life=0.7
 
 enabled=1
 showtip=0
+
+# 语言 / Language: auto / zh / en
+lang=auto
 ```
 
-可以直接改文件，重启程序后生效。出问题时的异常日志在同目录的 `error.log`。
+可以直接改文件，重启程序后生效。旧配置里的 `color=冰蓝` 会自动映射到 `cyan`。出问题时的异常日志在同目录的 `error.log`。
+
+## 语言 / Language
+
+- **应用内**：托盘菜单 → 语言 / Language → 自动 / 中文 / English，立即生效并保存；
+- **安装器 / 卸载器**：界面上的语言下拉框，安装时会把选择写入应用配置；
+- **配置文件**：`lang=auto|zh|en`，`auto` 跟随系统语言。
+
+英文说明见 [README.en.md](README.en.md)。
 
 ## 重新编译
 
@@ -86,7 +102,8 @@ showtip=0
 
 - `dist\鼠标拖尾.exe`（中文文件名）
 - `dist\cursor-comet.exe`（Release 用的 ASCII 文件名）
-- `dist\CursorComet-Setup.exe`（安装器，内嵌上面的便携版）
+- `dist\uninstall.exe`（独立卸载器）
+- `dist\CursorComet-Setup.exe`（安装器，内嵌便携版和卸载器）
 
 并嵌入 `assets\app.ico` 和 `assets\app.manifest`。
 
@@ -103,6 +120,7 @@ cursor-comet/
 ├─ dist/                   # 本地编译输出，发布时用 Releases
 │  ├─ 鼠标拖尾.exe
 │  ├─ cursor-comet.exe
+│  ├─ uninstall.exe
 │  └─ CursorComet-Setup.exe
 ├─ src/                    # C# 源码
 │  ├─ Program.cs           # 入口、单实例、DPI
@@ -112,11 +130,14 @@ cursor-comet/
 │  ├─ LayeredSurface.cs    # UpdateLayeredWindow 离屏画布
 │  ├─ AppSettings.cs       # 配置读写
 │  ├─ Palette.cs           # 颜色 / HSV
+│  ├─ L10n.cs              # 中英文字符串表
 │  ├─ IconFactory.cs       # 运行时绘制图标
 │  ├─ AutoStart.cs         # 开机启动
 │  └─ Native.cs            # Win32 声明
 ├─ installer/
-│  └─ Setup.cs             # 安装器源码（内嵌便携版，带卸载）
+│  ├─ Common.cs            # 安装器 / 卸载器共享代码
+│  ├─ Setup.cs             # 安装器（内嵌主程序和卸载器）
+│  └─ Uninstaller.cs       # 独立卸载器
 ├─ assets/
 │  ├─ app.ico
 │  └─ app.manifest
@@ -124,6 +145,8 @@ cursor-comet/
 ├─ tools/make-icon.ps1
 ├─ build.ps1
 ├─ preview.png
+├─ README.en.md
+├─ CHANGELOG.md
 ├─ LICENSE
 └─ README.md
 ```
@@ -149,6 +172,12 @@ cursor-comet/
 
 **开机启动在哪关闭？**
 托盘菜单取消勾选“开机自动启动”，或删除注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 下的 `MouseTrail`。
+
+**怎么切换语言？**
+托盘菜单 → 语言 / Language；安装器和卸载器界面上也有语言下拉框。应用内切换会立即生效并保存。
+
+**安装版怎么卸载？**
+“设置 → 应用 → 已安装的应用 → Cursor Comet”，或直接运行 `%LOCALAPPDATA%\Programs\CursorComet\uninstall.exe`。卸载器会删除快捷方式和卸载项，配置文件默认保留（可在卸载器里勾选一并删除）。
 
 **会被杀毒软件误报吗？**
 程序没有联网、没有提权，只是普通的 .NET WinForms 程序；因为未签名，个别杀软可能提示，介意的话可以自己用 `build.ps1` 编译。

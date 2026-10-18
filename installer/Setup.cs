@@ -3,52 +3,44 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using Microsoft.Win32;
 
 [assembly: AssemblyTitle("Cursor Comet Setup")]
 [assembly: AssemblyProduct("Cursor Comet")]
 [assembly: AssemblyDescription("Cursor Comet installer")]
 [assembly: AssemblyCompany("cwslz")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 namespace CursorCometSetup
 {
     internal static class Program
     {
-        internal const string AppName = "Cursor Comet";
-        internal const string AppVersion = "1.1.0";
-        internal const string AppExe = "cursor-comet.exe";
-        internal const string UninstallExe = "uninstall.exe";
-        internal const string ResourceName = "CursorCometApp.exe";
-        internal const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\CursorComet";
-        internal const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        internal const string RunValue = "MouseTrail";
-        internal const string RepoUrl = "https://github.com/cwslz/cursor-comet";
-
         [STAThread]
         private static void Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            bool silent = HasArg(args, "--silent");
-            if (HasArg(args, "--uninstall"))
+            string lang = GetArgValue(args, "--lang");
+            if (lang != "zh" && lang != "en")
             {
-                bool removeConfig = HasArg(args, "--remove-config");
-                Environment.ExitCode = Installer.Uninstall(silent, removeConfig);
-                return;
+                lang = AppConfig.ReadLanguage();
             }
+            if (lang != "zh" && lang != "en")
+            {
+                lang = L.SystemDefault();
+            }
+            L.Set(lang);
 
             if (HasArg(args, "--install"))
             {
-                string dir = GetArgValue(args, "--dir");
-                bool desktop = HasArg(args, "--desktop");
-                bool autoStart = HasArg(args, "--autostart");
-                bool launch = HasArg(args, "--launch");
-                Environment.ExitCode = Installer.Install(dir, desktop, autoStart, silent, launch);
+                Environment.ExitCode = Installer.Install(
+                    GetArgValue(args, "--dir"),
+                    HasArg(args, "--desktop"),
+                    HasArg(args, "--autostart"),
+                    HasArg(args, "--silent"),
+                    HasArg(args, "--launch"));
                 return;
             }
 
@@ -82,69 +74,33 @@ namespace CursorCometSetup
 
     internal static class Installer
     {
-        internal static string DefaultDir
-        {
-            get
-            {
-                return Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    @"Programs\CursorComet");
-            }
-        }
-
-        internal static string GetInstalledDir()
-        {
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(Program.UninstallKey, false))
-                {
-                    if (key != null)
-                    {
-                        string dir = key.GetValue("InstallLocation") as string;
-                        if (!string.IsNullOrEmpty(dir))
-                        {
-                            return Environment.ExpandEnvironmentVariables(dir);
-                        }
-                    }
-                }
-            }
-            catch
-            {
-            }
-            return null;
-        }
-
-        internal static bool IsInstalled()
-        {
-            string dir = GetInstalledDir();
-            return !string.IsNullOrEmpty(dir) && File.Exists(Path.Combine(dir, Program.AppExe));
-        }
-
         internal static int Install(string dir, bool desktopShortcut, bool autoStart, bool silent, bool launch)
         {
             try
             {
                 if (string.IsNullOrEmpty(dir))
                 {
-                    dir = DefaultDir;
+                    dir = AppPaths.DefaultDir;
                 }
                 dir = Path.GetFullPath(Environment.ExpandEnvironmentVariables(dir.Trim()));
-                if (!IsSafeInstallDir(dir))
+                if (!FsUtil.IsSafeInstallDir(dir))
                 {
-                    throw new InvalidOperationException("安装路径不合法，请选择一个普通文件夹。");
+                    throw new InvalidOperationException(L.T("安装路径不合法，请选择一个普通文件夹。",
+                        "Invalid install path. Please choose a normal folder."));
                 }
 
                 Directory.CreateDirectory(dir);
-                KillRunningApp();
-                ExtractApp(dir);
-                CreateShortcuts(dir, desktopShortcut);
-                WriteUninstallEntry(dir);
-                SetAutoStart(dir, autoStart);
-                CopyUninstaller(dir);
+                AppProcess.Kill();
+                Resources.Extract(AppInfo.AppResource, Path.Combine(dir, AppInfo.Exe));
+                Resources.Extract(AppInfo.UninstallResource, Path.Combine(dir, AppInfo.UninstallExe));
+                Shortcuts.Create(dir, desktopShortcut);
+                InstallRegistry.Write(dir);
+                AutoStartRegistry.Set(dir, autoStart);
+                AppConfig.WriteLanguage(L.Language);
 
                 if (launch)
                 {
-                    Process.Start(new ProcessStartInfo(Path.Combine(dir, Program.AppExe))
+                    Process.Start(new ProcessStartInfo(Path.Combine(dir, AppInfo.Exe))
                     {
                         WorkingDirectory = dir,
                         UseShellExecute = true
@@ -154,9 +110,11 @@ namespace CursorCometSetup
                 if (!silent)
                 {
                     MessageBox.Show(
-                        "安装完成。\r\n\r\n安装位置：" + dir +
-                        "\r\n\r\n可以从开始菜单启动；在“设置 → 应用 → 已安装的应用”里可以卸载。",
-                        Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        L.T("安装完成。\r\n\r\n安装位置：" + dir +
+                            "\r\n\r\n可以从开始菜单启动；在“设置 → 应用 → 已安装的应用”里可以卸载。",
+                            "Installation complete.\r\n\r\nLocation: " + dir +
+                            "\r\n\r\nLaunch it from the Start menu. Uninstall it from Settings → Apps → Installed apps."),
+                        AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 return 0;
             }
@@ -164,355 +122,35 @@ namespace CursorCometSetup
             {
                 if (!silent)
                 {
-                    MessageBox.Show("安装失败：\r\n" + ex.Message, Program.AppName,
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("安装失败：\r\n", "Installation failed:\r\n") + ex.Message,
+                        AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 return 1;
             }
         }
 
-        internal static int Uninstall(bool silent, bool removeConfig)
+        internal static void LaunchUninstaller()
         {
-            string dir = GetInstalledDir();
+            string dir = InstallRegistry.GetInstalledDir();
             if (string.IsNullOrEmpty(dir))
             {
-                dir = DefaultDir;
+                dir = AppPaths.DefaultDir;
             }
 
-            if (!silent)
+            string exe = Path.Combine(dir, AppInfo.UninstallExe);
+            if (!File.Exists(exe))
             {
-                DialogResult answer = MessageBox.Show(
-                    "确定要卸载 " + Program.AppName + " 吗？\r\n\r\n安装位置：" + dir,
-                    Program.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (answer != DialogResult.Yes)
-                {
-                    return 0;
-                }
+                MessageBox.Show(L.T("找不到 uninstall.exe，请重新安装。",
+                        "uninstall.exe was not found. Please reinstall."),
+                    AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            try
+            Process.Start(new ProcessStartInfo(exe)
             {
-                KillRunningApp();
-                RemoveShortcuts();
-                RemoveAutoStart();
-                RemoveUninstallEntry();
-                if (removeConfig)
-                {
-                    RemoveConfig();
-                }
-
-                string appPath = Path.Combine(dir, Program.AppExe);
-                string uninstallPath = Path.Combine(dir, Program.UninstallExe);
-                DeleteIfExists(appPath);
-                DeleteIfExists(uninstallPath);
-                TryDeleteEmptyDir(dir);
-                ScheduleSelfDelete(dir);
-
-                if (!silent)
-                {
-                    MessageBox.Show("卸载完成。", Program.AppName,
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                if (!silent)
-                {
-                    MessageBox.Show("卸载失败：\r\n" + ex.Message, Program.AppName,
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                return 1;
-            }
-        }
-
-        private static void ExtractApp(string dir)
-        {
-            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(Program.ResourceName))
-            {
-                if (stream == null)
-                {
-                    throw new InvalidOperationException("安装包损坏：找不到主程序资源。");
-                }
-
-                string target = Path.Combine(dir, Program.AppExe);
-                using (FileStream file = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    stream.CopyTo(file);
-                }
-            }
-        }
-
-        private static void CopyUninstaller(string dir)
-        {
-            string self = Application.ExecutablePath;
-            string target = Path.Combine(dir, Program.UninstallExe);
-            if (!string.Equals(Path.GetFullPath(self), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
-            {
-                File.Copy(self, target, true);
-            }
-        }
-
-        private static void CreateShortcuts(string dir, bool desktopShortcut)
-        {
-            string target = Path.Combine(dir, Program.AppExe);
-            string startMenu = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.Programs),
-                Program.AppName + ".lnk");
-            CreateShortcut(startMenu, target, dir, "Cursor Comet - 鼠标拖尾特效");
-
-            if (desktopShortcut)
-            {
-                string desktop = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                    Program.AppName + ".lnk");
-                CreateShortcut(desktop, target, dir, "Cursor Comet - 鼠标拖尾特效");
-            }
-        }
-
-        private static void CreateShortcut(string lnkPath, string targetPath, string workingDir, string description)
-        {
-            Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (shellType == null)
-            {
-                throw new InvalidOperationException("无法创建快捷方式：WScript.Shell 不可用。");
-            }
-
-            object shell = Activator.CreateInstance(shellType);
-            object shortcut = null;
-            try
-            {
-                shortcut = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod,
-                    null, shell, new object[] { lnkPath });
-                Type shortcutType = shortcut.GetType();
-                shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null,
-                    shortcut, new object[] { targetPath });
-                shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null,
-                    shortcut, new object[] { workingDir });
-                shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null,
-                    shortcut, new object[] { targetPath + ",0" });
-                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null,
-                    shortcut, new object[] { description });
-                shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
-            }
-            finally
-            {
-                if (shortcut != null)
-                {
-                    Marshal.ReleaseComObject(shortcut);
-                }
-                if (shell != null)
-                {
-                    Marshal.ReleaseComObject(shell);
-                }
-            }
-        }
-
-        private static void WriteUninstallEntry(string dir)
-        {
-            string exe = Path.Combine(dir, Program.AppExe);
-            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(Program.UninstallKey))
-            {
-                key.SetValue("DisplayName", Program.AppName);
-                key.SetValue("DisplayVersion", Program.AppVersion);
-                key.SetValue("Publisher", "cwslz");
-                key.SetValue("DisplayIcon", exe + ",0");
-                key.SetValue("InstallLocation", dir);
-                key.SetValue("UninstallString",
-                    "\"" + Path.Combine(dir, Program.UninstallExe) + "\" --uninstall");
-                key.SetValue("QuietUninstallString",
-                    "\"" + Path.Combine(dir, Program.UninstallExe) + "\" --uninstall --silent");
-                key.SetValue("NoModify", 1, RegistryValueKind.DWord);
-                key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
-                key.SetValue("URLInfoAbout", Program.RepoUrl);
-                key.SetValue("HelpLink", Program.RepoUrl);
-                try
-                {
-                    key.SetValue("EstimatedSize", (int)(new FileInfo(exe).Length / 1024), RegistryValueKind.DWord);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        private static void SetAutoStart(string dir, bool enabled)
-        {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(Program.RunKey, true))
-            {
-                if (key == null)
-                {
-                    return;
-                }
-
-                if (enabled)
-                {
-                    key.SetValue(Program.RunValue, "\"" + Path.Combine(dir, Program.AppExe) + "\"",
-                        RegistryValueKind.String);
-                }
-                else
-                {
-                    key.DeleteValue(Program.RunValue, false);
-                }
-            }
-        }
-
-        private static void RemoveShortcuts()
-        {
-            DeleteIfExists(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.Programs),
-                Program.AppName + ".lnk"));
-            DeleteIfExists(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                Program.AppName + ".lnk"));
-        }
-
-        private static void RemoveAutoStart()
-        {
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(Program.RunKey, true))
-                {
-                    if (key != null)
-                    {
-                        key.DeleteValue(Program.RunValue, false);
-                    }
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        private static void RemoveUninstallEntry()
-        {
-            try
-            {
-                Registry.CurrentUser.DeleteSubKeyTree(Program.UninstallKey, false);
-            }
-            catch
-            {
-            }
-        }
-
-        private static void RemoveConfig()
-        {
-            try
-            {
-                string configDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "MouseTrail");
-                if (Directory.Exists(configDir))
-                {
-                    Directory.Delete(configDir, true);
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        private static void KillRunningApp()
-        {
-            string[] names = new string[] { "cursor-comet", "鼠标拖尾" };
-            for (int i = 0; i < names.Length; i++)
-            {
-                Process[] processes = Process.GetProcessesByName(names[i]);
-                for (int j = 0; j < processes.Length; j++)
-                {
-                    try
-                    {
-                        processes[j].Kill();
-                        processes[j].WaitForExit(3000);
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        processes[j].Dispose();
-                    }
-                }
-            }
-        }
-
-        private static bool IsSafeInstallDir(string dir)
-        {
-            if (dir.Length < 5)
-            {
-                return false;
-            }
-
-            string root = Path.GetPathRoot(dir);
-            if (string.IsNullOrEmpty(root) ||
-                string.Equals(dir.TrimEnd('\\'), root.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            if (!string.IsNullOrEmpty(windows) &&
-                dir.StartsWith(windows, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private static void TryDeleteEmptyDir(string dir)
-        {
-            try
-            {
-                if (Directory.Exists(dir) && Directory.GetFileSystemEntries(dir).Length == 0)
-                {
-                    Directory.Delete(dir);
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        private static void ScheduleSelfDelete(string dir)
-        {
-            try
-            {
-                string exe = Application.ExecutablePath;
-                string selfDir = Path.GetDirectoryName(exe);
-                if (string.IsNullOrEmpty(selfDir) ||
-                    !string.Equals(Path.GetFullPath(selfDir).TrimEnd('\\'),
-                        Path.GetFullPath(dir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
-                string command = "/c ping 127.0.0.1 -n 3 >nul & del /f /q \"" + exe +
-                                 "\" & rd /q \"" + dir + "\"";
-                Process.Start(new ProcessStartInfo("cmd.exe", command)
-                {
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                });
-            }
-            catch
-            {
-            }
-        }
-
-        private static void DeleteIfExists(string path)
-        {
-            try
-            {
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-            }
-            catch
-            {
-            }
+                WorkingDirectory = dir,
+                UseShellExecute = true
+            });
         }
     }
 
@@ -525,25 +163,35 @@ namespace CursorCometSetup
         private readonly Button _install;
         private readonly Button _uninstall;
         private readonly Label _status;
+        private readonly Label _subtitle;
+        private readonly Label _pathLabel;
+        private readonly Button _browse;
+        private readonly Button _close;
+        private readonly Label _note;
+        private readonly Label _languageLabel;
+        private readonly ComboBox _languageCombo;
+        private bool _applyingLanguage;
+        private bool _loaded;
 
         internal SetupForm()
         {
-            Text = "Cursor Comet 安装程序";
-            ClientSize = new Size(820, 560);
-            MinimumSize = new Size(640, 460);
+            Text = "Cursor Comet Setup";
+            ClientSize = new Size(820, 600);
+            MinimumSize = new Size(640, 500);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.Dpi;
-            Font = new Font("Microsoft YaHei UI", 9f);
+            Font = new Font(L.IsChinese ? "Microsoft YaHei UI" : "Segoe UI", 9f);
 
             TableLayoutPanel root = new TableLayoutPanel();
             root.Dock = DockStyle.Fill;
             root.Padding = new Padding(22, 18, 22, 18);
             root.ColumnCount = 1;
-            root.RowCount = 7;
+            root.RowCount = 8;
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -588,21 +236,40 @@ namespace CursorCometSetup
             headerText.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             Label title = new Label();
-            title.Text = "Cursor Comet";
+            title.Text = AppInfo.Name;
             title.Font = new Font(Font.FontFamily, 16f, FontStyle.Bold);
             title.AutoSize = true;
             title.Margin = new Padding(0, 0, 0, 2);
             headerText.Controls.Add(title, 0, 0);
 
-            Label subtitle = new Label();
-            subtitle.Text = "Windows 鼠标拖尾特效 · 安装程序";
-            subtitle.ForeColor = Color.Gray;
-            subtitle.AutoSize = true;
-            subtitle.Margin = new Padding(0, 0, 0, 0);
-            headerText.Controls.Add(subtitle, 0, 1);
+            _subtitle = new Label();
+            _subtitle.AutoSize = true;
+            _subtitle.ForeColor = Color.Gray;
+            _subtitle.Margin = new Padding(0, 0, 0, 0);
+            headerText.Controls.Add(_subtitle, 0, 1);
 
             header.Controls.Add(headerText, 1, 0);
             root.Controls.Add(header, 0, 0);
+
+            FlowLayoutPanel languageRow = new FlowLayoutPanel();
+            languageRow.AutoSize = true;
+            languageRow.WrapContents = false;
+            languageRow.Margin = new Padding(0, 14, 0, 0);
+
+            _languageLabel = new Label();
+            _languageLabel.AutoSize = true;
+            _languageLabel.Margin = new Padding(0, 6, 10, 0);
+            languageRow.Controls.Add(_languageLabel);
+
+            _languageCombo = new ComboBox();
+            _languageCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+            _languageCombo.Width = 150;
+            _languageCombo.Items.Add("中文");
+            _languageCombo.Items.Add("English");
+            _languageCombo.Margin = new Padding(0, 2, 0, 0);
+            _languageCombo.SelectedIndexChanged += LanguageChanged;
+            languageRow.Controls.Add(_languageCombo);
+            root.Controls.Add(languageRow, 0, 1);
 
             TableLayoutPanel pathRow = new TableLayoutPanel();
             pathRow.AutoSize = true;
@@ -612,28 +279,25 @@ namespace CursorCometSetup
             pathRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pathRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             pathRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            pathRow.Margin = new Padding(0, 18, 0, 0);
+            pathRow.Margin = new Padding(0, 16, 0, 0);
 
-            Label pathLabel = new Label();
-            pathLabel.Text = "安装位置";
-            pathLabel.AutoSize = true;
-            pathLabel.Anchor = AnchorStyles.Left;
-            pathLabel.Margin = new Padding(0, 6, 12, 0);
-            pathRow.Controls.Add(pathLabel, 0, 0);
+            _pathLabel = new Label();
+            _pathLabel.AutoSize = true;
+            _pathLabel.Anchor = AnchorStyles.Left;
+            _pathLabel.Margin = new Padding(0, 6, 12, 0);
+            pathRow.Controls.Add(_pathLabel, 0, 0);
 
             _path = new TextBox();
             _path.Dock = DockStyle.Fill;
             _path.Margin = new Padding(0, 4, 10, 0);
             pathRow.Controls.Add(_path, 1, 0);
 
-            Button browse = new Button();
-            browse.Text = "浏览…";
-            browse.AutoSize = true;
-            browse.Margin = new Padding(0, 2, 0, 0);
-            browse.Click += BrowseClicked;
-            pathRow.Controls.Add(browse, 2, 0);
-
-            root.Controls.Add(pathRow, 0, 1);
+            _browse = new Button();
+            _browse.AutoSize = true;
+            _browse.Margin = new Padding(0, 2, 0, 0);
+            _browse.Click += BrowseClicked;
+            pathRow.Controls.Add(_browse, 2, 0);
+            root.Controls.Add(pathRow, 0, 2);
 
             FlowLayoutPanel checks = new FlowLayoutPanel();
             checks.FlowDirection = FlowDirection.TopDown;
@@ -642,25 +306,21 @@ namespace CursorCometSetup
             checks.Margin = new Padding(0, 16, 0, 0);
 
             _desktop = new CheckBox();
-            _desktop.Text = "创建桌面快捷方式";
             _desktop.AutoSize = true;
             _desktop.Margin = new Padding(0, 3, 0, 3);
             checks.Controls.Add(_desktop);
 
             _autoStart = new CheckBox();
-            _autoStart.Text = "开机自动启动";
             _autoStart.AutoSize = true;
             _autoStart.Margin = new Padding(0, 3, 0, 3);
             checks.Controls.Add(_autoStart);
 
             _launch = new CheckBox();
-            _launch.Text = "安装完成后启动";
             _launch.AutoSize = true;
             _launch.Checked = true;
             _launch.Margin = new Padding(0, 3, 0, 3);
             checks.Controls.Add(_launch);
-
-            root.Controls.Add(checks, 0, 2);
+            root.Controls.Add(checks, 0, 3);
 
             FlowLayoutPanel buttons = new FlowLayoutPanel();
             buttons.FlowDirection = FlowDirection.RightToLeft;
@@ -669,80 +329,116 @@ namespace CursorCometSetup
             buttons.WrapContents = false;
             buttons.Margin = new Padding(0, 18, 0, 0);
 
-            Button close = new Button();
-            close.Text = "关闭";
-            close.AutoSize = true;
-            close.MinimumSize = new Size(96, 34);
-            close.Margin = new Padding(6, 0, 0, 0);
-            close.Click += delegate { Close(); };
-            buttons.Controls.Add(close);
+            _close = new Button();
+            _close.AutoSize = true;
+            _close.MinimumSize = new Size(96, 34);
+            _close.Margin = new Padding(6, 0, 0, 0);
+            _close.Click += delegate { Close(); };
+            buttons.Controls.Add(_close);
 
             _uninstall = new Button();
-            _uninstall.Text = "卸载";
             _uninstall.AutoSize = true;
             _uninstall.MinimumSize = new Size(96, 34);
             _uninstall.Margin = new Padding(6, 0, 0, 0);
-            _uninstall.Click += UninstallClicked;
             _uninstall.Enabled = false;
+            _uninstall.Click += UninstallClicked;
             buttons.Controls.Add(_uninstall);
 
             _install = new Button();
-            _install.Text = "安装";
             _install.AutoSize = true;
             _install.MinimumSize = new Size(110, 34);
             _install.Margin = new Padding(6, 0, 0, 0);
             _install.Click += InstallClicked;
             buttons.Controls.Add(_install);
             AcceptButton = _install;
-
-            root.Controls.Add(buttons, 0, 4);
+            root.Controls.Add(buttons, 0, 5);
 
             _status = new Label();
             _status.AutoSize = true;
-            _status.MaximumSize = new Size(1200, 0);
+            _status.MaximumSize = new Size(1400, 0);
             _status.ForeColor = Color.Gray;
             _status.Margin = new Padding(0, 14, 0, 0);
-            root.Controls.Add(_status, 0, 5);
+            root.Controls.Add(_status, 0, 6);
 
-            Label note = new Label();
-            note.Text = "安装完成后可在开始菜单找到 Cursor Comet。";
-            note.ForeColor = Color.Gray;
-            note.Font = new Font(Font.FontFamily, 8.5f);
-            note.AutoSize = true;
-            note.Margin = new Padding(0, 8, 0, 0);
-            root.Controls.Add(note, 0, 6);
+            _note = new Label();
+            _note.AutoSize = true;
+            _note.ForeColor = Color.Gray;
+            _note.Font = new Font(Font.FontFamily, 8.5f);
+            _note.Margin = new Padding(0, 8, 0, 0);
+            root.Controls.Add(_note, 0, 7);
 
             Controls.Add(root);
-            Load += delegate { RefreshState(); };
+            Load += delegate
+            {
+                ApplyLanguage();
+            };
+        }
+
+        private void LanguageChanged(object sender, EventArgs e)
+        {
+            if (_applyingLanguage || !_loaded)
+            {
+                return;
+            }
+
+            L.Set(_languageCombo.SelectedIndex == 1 ? "en" : "zh");
+            ApplyLanguage();
+        }
+
+        private void ApplyLanguage()
+        {
+            _applyingLanguage = true;
+            _languageCombo.SelectedIndex = L.IsChinese ? 0 : 1;
+            _applyingLanguage = false;
+            _loaded = true;
+
+            Text = L.T("Cursor Comet 安装程序", "Cursor Comet Setup");
+            _subtitle.Text = L.T("Windows 鼠标拖尾特效 · 安装程序", "Windows cursor trail effect · Setup");
+            _languageLabel.Text = "语言 / Language";
+            _pathLabel.Text = L.T("安装位置", "Install location");
+            _browse.Text = L.T("浏览…", "Browse…");
+            _desktop.Text = L.T("创建桌面快捷方式", "Create desktop shortcut");
+            _autoStart.Text = L.T("开机自动启动", "Start with Windows");
+            _launch.Text = L.T("安装完成后启动", "Launch after install");
+            _install.Text = L.T("安装", "Install");
+            _uninstall.Text = L.T("卸载", "Uninstall");
+            _close.Text = L.T("关闭", "Close");
+            _note.Text = L.T("安装完成后可在开始菜单找到 Cursor Comet。",
+                "Cursor Comet will appear in the Start menu.");
+            RefreshState();
         }
 
         private void RefreshState()
         {
-            string installed = Installer.GetInstalledDir();
-            if (!string.IsNullOrEmpty(installed) && Directory.Exists(installed))
+            string installed = InstallRegistry.GetInstalledDir();
+            if (!string.IsNullOrEmpty(installed) && File.Exists(Path.Combine(installed, AppInfo.Exe)))
             {
-                _path.Text = installed; _path.SelectionStart = 0;
-                _status.Text = "已安装到该位置，可以覆盖安装或卸载。";
+                _path.Text = installed;
+                _status.Text = L.T("已安装到该位置，可以覆盖安装或卸载。",
+                    "Already installed here. You can reinstall or uninstall.");
                 _uninstall.Enabled = true;
             }
             else
             {
-                _path.Text = Installer.DefaultDir; _path.SelectionStart = 0;
-                _status.Text = "默认安装到当前用户目录，不需要管理员权限。";
+                _path.Text = AppPaths.DefaultDir;
+                _status.Text = L.T("默认安装到当前用户目录，不需要管理员权限。",
+                    "Installs for the current user; no administrator rights required.");
                 _uninstall.Enabled = false;
             }
+            _path.SelectionStart = 0;
         }
 
         private void BrowseClicked(object sender, EventArgs e)
         {
             using (FolderBrowserDialog dialog = new FolderBrowserDialog())
             {
-                dialog.Description = "选择 Cursor Comet 的安装位置";
+                dialog.Description = L.T("选择 Cursor Comet 的安装位置", "Choose the install location");
                 dialog.ShowNewFolderButton = true;
                 dialog.SelectedPath = _path.Text;
                 if (dialog.ShowDialog(this) == DialogResult.OK)
                 {
-                    _path.Text = dialog.SelectedPath; _path.SelectionStart = 0;
+                    _path.Text = dialog.SelectedPath;
+                    _path.SelectionStart = 0;
                 }
             }
         }
@@ -752,8 +448,8 @@ namespace CursorCometSetup
             string dir = _path.Text.Trim();
             if (dir.Length == 0)
             {
-                MessageBox.Show("请先选择安装位置。", Program.AppName,
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("请先选择安装位置。", "Please choose an install location."),
+                    AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -765,7 +461,7 @@ namespace CursorCometSetup
                 int result = Installer.Install(dir, _desktop.Checked, _autoStart.Checked, false, _launch.Checked);
                 if (result == 0)
                 {
-                    _status.Text = "安装完成：" + dir;
+                    _status.Text = L.T("安装完成：", "Installed to: ") + dir;
                     _uninstall.Enabled = true;
                 }
             }
@@ -778,23 +474,8 @@ namespace CursorCometSetup
 
         private void UninstallClicked(object sender, EventArgs e)
         {
-            Cursor = Cursors.WaitCursor;
-            _install.Enabled = false;
-            _uninstall.Enabled = false;
-            try
-            {
-                int result = Installer.Uninstall(false, false);
-                if (result == 0)
-                {
-                    _status.Text = "已卸载。";
-                    _uninstall.Enabled = false;
-                }
-            }
-            finally
-            {
-                Cursor = Cursors.Default;
-                _install.Enabled = true;
-            }
+            Installer.LaunchUninstaller();
+            Close();
         }
     }
 }

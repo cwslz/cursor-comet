@@ -55,9 +55,41 @@ Write-Host ''
 Write-Host "编译完成：$exePath"
 Write-Host "发布文件：$artifact"
 
-# 编译安装器，并把便携版 exe 作为资源嵌进去。
+$commonSource = Join-Path $root 'installer\Common.cs'
+$uninstallerSource = Join-Path $root 'installer\Uninstaller.cs'
+$uninstallerPath = Join-Path $dist 'uninstall.exe'
+if ((Test-Path $commonSource) -and (Test-Path $uninstallerSource)) {
+    $uninstallerArgs = @(
+        '/nologo',
+        '/target:winexe',
+        '/platform:anycpu',
+        '/optimize+',
+        '/codepage:65001',
+        '/utf8output',
+        '/reference:System.dll',
+        '/reference:System.Drawing.dll',
+        '/reference:System.Windows.Forms.dll',
+        "/out:$uninstallerPath"
+    )
+    if (Test-Path $icon) {
+        $uninstallerArgs += "/win32icon:$icon"
+    }
+    if (Test-Path $manifest) {
+        $uninstallerArgs += "/win32manifest:$manifest"
+    }
+    $uninstallerArgs += $commonSource
+    $uninstallerArgs += $uninstallerSource
+
+    & $csc $uninstallerArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "卸载器编译失败，退出码 $LASTEXITCODE"
+    }
+    Write-Host "卸载器：$uninstallerPath"
+}
+
+# 编译安装器，把便携版 exe 和独立卸载器都嵌进去。
 $setupSource = Join-Path $root 'installer\Setup.cs'
-if (Test-Path $setupSource) {
+if ((Test-Path $commonSource) -and (Test-Path $setupSource) -and (Test-Path $uninstallerPath)) {
     $setupPath = Join-Path $dist 'CursorComet-Setup.exe'
     $setupArgs = @(
         '/nologo',
@@ -70,6 +102,7 @@ if (Test-Path $setupSource) {
         '/reference:System.Drawing.dll',
         '/reference:System.Windows.Forms.dll',
         "/resource:$artifact,CursorCometApp.exe",
+        "/resource:$uninstallerPath,CursorCometUninstall.exe",
         "/out:$setupPath"
     )
     if (Test-Path $icon) {
@@ -78,6 +111,7 @@ if (Test-Path $setupSource) {
     if (Test-Path $manifest) {
         $setupArgs += "/win32manifest:$manifest"
     }
+    $setupArgs += $commonSource
     $setupArgs += $setupSource
 
     & $csc $setupArgs

@@ -28,6 +28,7 @@ jobs:
           name: cursor-comet
           path: |
             dist/cursor-comet.exe
+            dist/uninstall.exe
             dist/CursorComet-Setup.exe
 
       - name: Create release
@@ -37,5 +38,6 @@ jobs:
           name: Cursor Comet ${{ github.ref_name }}
           files: |
             dist/cursor-comet.exe
+            dist/uninstall.exe
             dist/CursorComet-Setup.exe
           generate_release_notes: true

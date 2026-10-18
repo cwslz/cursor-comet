@@ -3,34 +3,83 @@ using System.Drawing;
 
 namespace MouseTrail
 {
-    /// <summary>颜色与 HSV 工具。</summary>
+    internal sealed class ColorDef
+    {
+        public readonly string Key;
+        public readonly string Zh;
+        public readonly string En;
+        public readonly Color Value;
+
+        public ColorDef(string key, string zh, string en, Color value)
+        {
+            Key = key;
+            Zh = zh;
+            En = en;
+            Value = value;
+        }
+    }
+
+    /// <summary>颜色定义与 HSV 工具。配置里存稳定的 key，界面显示按语言切换。</summary>
     internal static class Palette
     {
-        public static readonly string[] Names = new string[]
+        private static readonly ColorDef[] _definitions = new ColorDef[]
         {
-            "冰蓝", "紫罗兰", "樱花粉", "金色", "薄荷", "白色"
+            new ColorDef("cyan", "冰蓝", "Ice Blue", Color.FromArgb(72, 214, 255)),
+            new ColorDef("violet", "紫罗兰", "Violet", Color.FromArgb(178, 128, 255)),
+            new ColorDef("pink", "樱花粉", "Sakura Pink", Color.FromArgb(255, 128, 196)),
+            new ColorDef("gold", "金色", "Gold", Color.FromArgb(255, 198, 92)),
+            new ColorDef("mint", "薄荷", "Mint", Color.FromArgb(96, 255, 186)),
+            new ColorDef("white", "白色", "White", Color.FromArgb(240, 244, 255))
         };
 
-        public static bool Exists(string name)
+        public static ColorDef[] Definitions
         {
-            for (int i = 0; i < Names.Length; i++)
-            {
-                if (Names[i] == name)
-                {
-                    return true;
-                }
-            }
-            return false;
+            get { return _definitions; }
         }
 
-        public static Color Get(string name)
+        public static ColorDef Find(string value)
         {
-            if (name == "紫罗兰") return Color.FromArgb(178, 128, 255);
-            if (name == "樱花粉") return Color.FromArgb(255, 128, 196);
-            if (name == "金色") return Color.FromArgb(255, 198, 92);
-            if (name == "薄荷") return Color.FromArgb(96, 255, 186);
-            if (name == "白色") return Color.FromArgb(240, 244, 255);
-            return Color.FromArgb(72, 214, 255);
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+
+            for (int i = 0; i < _definitions.Length; i++)
+            {
+                ColorDef def = _definitions[i];
+                if (value == def.Key || value == def.Zh || value == def.En)
+                {
+                    return def;
+                }
+            }
+            return null;
+        }
+
+        public static string Normalize(string value)
+        {
+            ColorDef def = Find(value);
+            return def == null ? null : def.Key;
+        }
+
+        public static bool Exists(string value)
+        {
+            return Find(value) != null;
+        }
+
+        public static Color Get(string value)
+        {
+            ColorDef def = Find(value);
+            return def == null ? _definitions[0].Value : def.Value;
+        }
+
+        public static string Display(string value)
+        {
+            ColorDef def = Find(value);
+            if (def == null)
+            {
+                return value;
+            }
+            return L10n.IsChinese ? def.Zh : def.En;
         }
 
         public static Color Blend(Color a, Color b, float t)

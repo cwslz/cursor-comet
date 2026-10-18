@@ -9,7 +9,7 @@ namespace MouseTrail
     internal sealed class AppSettings
     {
         public const string DefaultStyle = "comet";
-        public const string DefaultColor = "冰蓝";
+        public const string DefaultColor = "cyan";
         public const double DefaultLife = 0.7;
         public const float DefaultScale = 1f;
 
@@ -19,6 +19,7 @@ namespace MouseTrail
         public double Life = DefaultLife;
         public bool Enabled = true;
         public bool ShowTip = true;
+        public string Language = "auto";
 
         public static string Folder
         {
@@ -39,6 +40,15 @@ namespace MouseTrail
             ColorName = DefaultColor;
             Scale = DefaultScale;
             Life = DefaultLife;
+        }
+
+        public string ResolveLanguage()
+        {
+            if (Language == "zh" || Language == "en")
+            {
+                return Language;
+            }
+            return L10n.SystemDefault();
         }
 
         public static AppSettings Load()
@@ -76,9 +86,13 @@ namespace MouseTrail
                     {
                         settings.Style = val;
                     }
-                    else if (key == "color" && Palette.Exists(val))
+                    else if (key == "color")
                     {
-                        settings.ColorName = val;
+                        string color = Palette.Normalize(val);
+                        if (color != null)
+                        {
+                            settings.ColorName = color;
+                        }
                     }
                     else if (key == "scale")
                     {
@@ -101,6 +115,10 @@ namespace MouseTrail
                     else if (key == "showtip")
                     {
                         settings.ShowTip = ParseBool(val, settings.ShowTip);
+                    }
+                    else if (key == "lang" && (val == "auto" || val == "zh" || val == "en"))
+                    {
+                        settings.Language = val;
                     }
                 }
             }
@@ -138,13 +156,17 @@ namespace MouseTrail
             {
                 Directory.CreateDirectory(Folder);
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine("# 鼠标拖尾配置（可直接修改，重启程序后生效）");
+                sb.AppendLine("# MouseTrail / 鼠标拖尾 配置：可直接修改，重启后生效");
+                sb.AppendLine("# 样式 / Style: comet / rainbow / sparks / minimal");
                 sb.AppendLine("style=" + Style);
+                sb.AppendLine("# 颜色 / Color: cyan / violet / pink / gold / mint / white");
                 sb.AppendLine("color=" + ColorName);
                 sb.AppendLine("scale=" + Scale.ToString("0.###", CultureInfo.InvariantCulture));
                 sb.AppendLine("life=" + Life.ToString("0.##", CultureInfo.InvariantCulture));
                 sb.AppendLine("enabled=" + (Enabled ? "1" : "0"));
                 sb.AppendLine("showtip=" + (ShowTip ? "1" : "0"));
+                sb.AppendLine("# 语言 / Language: auto / zh / en");
+                sb.AppendLine("lang=" + Language);
 
                 string tmp = FilePath + ".tmp";
                 File.WriteAllText(tmp, sb.ToString(), new UTF8Encoding(false));
