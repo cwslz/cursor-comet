@@ -22,6 +22,8 @@ Download `CursorComet-Setup.exe` from [Releases](https://github.com/cwslz/cursor
 - Installs a standalone `uninstall.exe`, also listed in Settings → Apps;
 - The installer already contains the app; no separate exe download.
 
+The setup only installs. To remove the app, use Settings → Apps, or run `uninstall.exe` from the install folder.
+
 ### Portable
 
 Download `cursor-comet.exe` and run it. It does not write an install directory; settings still live in `%APPDATA%\MouseTrail`.
@@ -100,7 +102,7 @@ The script produces:
 
 - `dist\鼠标拖尾.exe` (Chinese file name)
 - `dist\cursor-comet.exe` (ASCII name used for releases)
-- `dist\uninstall.exe` (standalone uninstaller)
+- `dist\uninstall.exe` (standalone uninstaller, embedded by the setup and not published separately)
 - `dist\CursorComet-Setup.exe` (installer embedding the app and the uninstaller)
 
 It embeds `assets\app.ico` and `assets\app.manifest`. To regenerate the multi-size icon:

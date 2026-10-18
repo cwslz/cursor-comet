@@ -9,8 +9,8 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Cursor Comet")]
 [assembly: AssemblyDescription("Cursor Comet installer")]
 [assembly: AssemblyCompany("cwslz")]
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.2.1.0")]
+[assembly: AssemblyFileVersion("1.2.1.0")]
 
 namespace CursorCometSetup
 {
@@ -128,30 +128,6 @@ namespace CursorCometSetup
                 return 1;
             }
         }
-
-        internal static void LaunchUninstaller()
-        {
-            string dir = InstallRegistry.GetInstalledDir();
-            if (string.IsNullOrEmpty(dir))
-            {
-                dir = AppPaths.DefaultDir;
-            }
-
-            string exe = Path.Combine(dir, AppInfo.UninstallExe);
-            if (!File.Exists(exe))
-            {
-                MessageBox.Show(L.T("找不到 uninstall.exe，请重新安装。",
-                        "uninstall.exe was not found. Please reinstall."),
-                    AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo(exe)
-            {
-                WorkingDirectory = dir,
-                UseShellExecute = true
-            });
-        }
     }
 
     internal sealed class SetupForm : Form
@@ -161,7 +137,6 @@ namespace CursorCometSetup
         private readonly CheckBox _autoStart;
         private readonly CheckBox _launch;
         private readonly Button _install;
-        private readonly Button _uninstall;
         private readonly Label _status;
         private readonly Label _subtitle;
         private readonly Label _pathLabel;
@@ -336,14 +311,6 @@ namespace CursorCometSetup
             _close.Click += delegate { Close(); };
             buttons.Controls.Add(_close);
 
-            _uninstall = new Button();
-            _uninstall.AutoSize = true;
-            _uninstall.MinimumSize = new Size(96, 34);
-            _uninstall.Margin = new Padding(6, 0, 0, 0);
-            _uninstall.Enabled = false;
-            _uninstall.Click += UninstallClicked;
-            buttons.Controls.Add(_uninstall);
-
             _install = new Button();
             _install.AutoSize = true;
             _install.MinimumSize = new Size(110, 34);
@@ -401,7 +368,6 @@ namespace CursorCometSetup
             _autoStart.Text = L.T("开机自动启动", "Start with Windows");
             _launch.Text = L.T("安装完成后启动", "Launch after install");
             _install.Text = L.T("安装", "Install");
-            _uninstall.Text = L.T("卸载", "Uninstall");
             _close.Text = L.T("关闭", "Close");
             _note.Text = L.T("安装完成后可在开始菜单找到 Cursor Comet。",
                 "Cursor Comet will appear in the Start menu.");
@@ -414,16 +380,14 @@ namespace CursorCometSetup
             if (!string.IsNullOrEmpty(installed) && File.Exists(Path.Combine(installed, AppInfo.Exe)))
             {
                 _path.Text = installed;
-                _status.Text = L.T("已安装到该位置，可以覆盖安装或卸载。",
-                    "Already installed here. You can reinstall or uninstall.");
-                _uninstall.Enabled = true;
+                _status.Text = L.T("已安装到该位置，可以覆盖安装。",
+                    "Already installed here. You can reinstall.");
             }
             else
             {
                 _path.Text = AppPaths.DefaultDir;
                 _status.Text = L.T("默认安装到当前用户目录，不需要管理员权限。",
                     "Installs for the current user; no administrator rights required.");
-                _uninstall.Enabled = false;
             }
             _path.SelectionStart = 0;
         }
@@ -455,14 +419,12 @@ namespace CursorCometSetup
 
             Cursor = Cursors.WaitCursor;
             _install.Enabled = false;
-            _uninstall.Enabled = false;
             try
             {
                 int result = Installer.Install(dir, _desktop.Checked, _autoStart.Checked, false, _launch.Checked);
                 if (result == 0)
                 {
                     _status.Text = L.T("安装完成：", "Installed to: ") + dir;
-                    _uninstall.Enabled = true;
                 }
             }
             finally
@@ -470,12 +432,6 @@ namespace CursorCometSetup
                 Cursor = Cursors.Default;
                 _install.Enabled = true;
             }
-        }
-
-        private void UninstallClicked(object sender, EventArgs e)
-        {
-            Installer.LaunchUninstaller();
-            Close();
         }
     }
 }

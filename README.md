@@ -22,6 +22,8 @@
 - 同时安装独立的 `uninstall.exe`，在“设置 → 应用”里可以直接卸载；
 - 安装器里已经包含主程序，不需要另外下载 exe。
 
+安装器只负责安装；卸载请使用“设置 → 应用 → 已安装的应用”，或直接运行安装目录里的 `uninstall.exe`。
+
 ### 便携版
 
 下载 `cursor-comet.exe`，双击运行，不会写入安装目录；配置文件仍然在 `%APPDATA%\MouseTrail`。
@@ -102,7 +104,7 @@ lang=auto
 
 - `dist\鼠标拖尾.exe`（中文文件名）
 - `dist\cursor-comet.exe`（Release 用的 ASCII 文件名）
-- `dist\uninstall.exe`（独立卸载器）
+- `dist\uninstall.exe`（独立卸载器，安装器内嵌使用，不单独发布）
 - `dist\CursorComet-Setup.exe`（安装器，内嵌便携版和卸载器）
 
 并嵌入 `assets\app.ico` 和 `assets\app.manifest`。
