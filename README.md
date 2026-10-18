@@ -17,7 +17,8 @@
 从 [Releases](https://github.com/cwslz/cursor-comet/releases/latest) 下载 `CursorComet-Setup.exe`，双击安装。
 
 - 默认安装到 `%LOCALAPPDATA%\Programs\CursorComet`，不需要管理员权限；
-- 安装界面支持中文 / English 切换；
+- 安装界面是三步向导：选择语言 → 同意许可协议 → 安装位置；
+- 点击“安装”后显示进度条，完成后可点“完成”退出；
 - 自动创建开始菜单快捷方式，可选桌面快捷方式；
 - 同时安装独立的 `uninstall.exe`，在“设置 → 应用”里可以直接卸载；
 - 安装器里已经包含主程序，不需要另外下载 exe。
@@ -51,7 +52,7 @@
 ## 特性
 
 - **中英文双语**：托盘菜单、安装器、卸载器都可以切换语言
-- 便携版是单文件 exe（约 56 KB）；安装版是一个约 140 KB 的安装器，内部已包含主程序和独立的 `uninstall.exe`
+- 便携版是单文件 exe（约 56 KB）；安装版是一个约 145 KB 的安装器，内部已包含主程序和独立的 `uninstall.exe`
 - 不需要安装 Python、Node 或 .NET SDK，使用 Windows 自带的 .NET Framework 4.8
 - 逐像素透明 + 鼠标穿透（`WS_EX_LAYERED | WS_EX_TRANSPARENT`），正常点击、拖拽、输入不受影响
 - 覆盖整个屏幕的透明窗口，轨迹按**固定时间**淡出：高速移动时拖尾自然变长，不会被窗口裁剪或断尾

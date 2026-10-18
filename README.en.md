@@ -17,7 +17,8 @@ A lightweight Windows cursor trail effect: a transparent overlay follows the mou
 Download `CursorComet-Setup.exe` from [Releases](https://github.com/cwslz/cursor-comet/releases/latest) and run it.
 
 - Installs to `%LOCALAPPDATA%\Programs\CursorComet`; no administrator rights needed;
-- The setup UI supports English / 中文;
+- Three-step wizard: choose language → accept the license → install location;
+- Clicking “Install” shows a progress bar; click “Finish” when done;
 - Creates a Start menu shortcut; optional desktop shortcut;
 - Installs a standalone `uninstall.exe`, also listed in Settings → Apps;
 - The installer already contains the app; no separate exe download.
@@ -51,7 +52,7 @@ The tray menu can change:
 ## Features
 
 - **Bilingual UI**: switch language in the tray menu, installer and uninstaller
-- Portable build is a single exe (~56 KB); the installer is ~140 KB and contains the app plus a standalone `uninstall.exe`
+- Portable build is a single exe (~56 KB); the installer is ~145 KB and contains the app plus a standalone `uninstall.exe`
 - No Python, Node or .NET SDK required; uses the built-in .NET Framework 4.8
 - Per-pixel transparent + click-through (`WS_EX_LAYERED | WS_EX_TRANSPARENT`); normal clicking, dragging and typing are unaffected
 - Full-screen transparent overlay, trail fades by **fixed time**: fast movement makes it longer instead of clipping or breaking
