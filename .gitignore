@@ -1,0 +1,12 @@
+# 编译输出（用 Releases 发布二进制，或让用户自己 build）
+dist/
+bin/
+obj/
+*.pdb
+
+# 本机快捷方式：.lnk 里保存了绝对路径，会泄露 Windows 用户名
+*.lnk
+
+# 本地测试产物
+tools/shots/
+*.user
