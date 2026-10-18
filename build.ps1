@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -47,5 +47,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "编译失败，退出码 $LASTEXITCODE"
 }
 
+# 额外输出一份 ASCII 文件名，方便 CI/Release 使用，避免中文路径在 runner 上出问题。
+$artifact = Join-Path $dist 'cursor-comet.exe'
+Copy-Item $exePath $artifact -Force
+
 Write-Host ''
 Write-Host "编译完成：$exePath"
+Write-Host "发布文件：$artifact"
