@@ -330,43 +330,87 @@ namespace CursorComet
                     }
                 }
 
-                for (int i = 1; i < dense.Count; i++)
+                const int TrailBands = 12;
+                GraphicsPath[] trailPaths = new GraphicsPath[TrailBands];
+                float[] bandTime = new float[TrailBands];
+                int[] bandCount = new int[TrailBands];
+                for (int b = 0; b < TrailBands; b++)
                 {
-                    TrailPoint a0 = dense[i - 1];
-                    TrailPoint a1 = dense[i];
-                    float f = Fade(now, a1.T, cfg.Life);
-                    if (f <= 0.015f)
+                    trailPaths[b] = new GraphicsPath();
+                }
+
+                try
+                {
+                    for (int i = 1; i < dense.Count; i++)
                     {
-                        continue;
+                        TrailPoint a0 = dense[i - 1];
+                        TrailPoint a1 = dense[i];
+                        float f = Fade(now, a1.T, cfg.Life);
+                        if (f <= 0.015f)
+                        {
+                            continue;
+                        }
+
+                        float r = maxR * (float)Math.Pow(f, 0.62);
+                        float a = 228f * (float)Math.Pow(f, 1.15) * opacity;
+                        if (r < 0.4f || a < 1.2f)
+                        {
+                            continue;
+                        }
+
+                        int band = (int)(f * TrailBands);
+                        if (band >= TrailBands)
+                        {
+                            band = TrailBands - 1;
+                        }
+                        trailPaths[band].AddLine(a0.X, a0.Y, a1.X, a1.Y);
+                        bandTime[band] += (float)a1.T;
+                        bandCount[band]++;
                     }
 
-                    float r = maxR * (float)Math.Pow(f, 0.62);
-                    float a = 228f * (float)Math.Pow(f, 1.15) * opacity;
-                    if (r < 0.4f || a < 1.2f)
+                    for (int b = 0; b < TrailBands; b++)
                     {
-                        continue;
-                    }
+                        if (trailPaths[b].PointCount < 2)
+                        {
+                            continue;
+                        }
+                        float f = (b + 0.5f) / TrailBands;
+                        float r = maxR * (float)Math.Pow(f, 0.62);
+                        float a = 228f * (float)Math.Pow(f, 1.15) * opacity;
+                        if (r < 0.4f || a < 1.2f)
+                        {
+                            continue;
+                        }
 
-                    Color color;
-                    if (rainbow)
-                    {
-                        color = Palette.Hsv((a1.T * cfg.RainbowSpeed + cfg.RainbowOffset) % 1.0,
-                            cfg.RainbowSaturation, 1.0);
-                    }
-                    else
-                    {
-                        color = Palette.Blend(baseColor, Color.White, 0.15f * f * f);
-                    }
+                        Color color;
+                        if (rainbow)
+                        {
+                            float t = bandCount[b] > 0 ? bandTime[b] / bandCount[b] : (float)now;
+                            color = Palette.Hsv((t * cfg.RainbowSpeed + cfg.RainbowOffset) % 1.0,
+                                cfg.RainbowSaturation, 1.0);
+                        }
+                        else
+                        {
+                            color = Palette.Blend(baseColor, Color.White, 0.15f * f * f);
+                        }
 
-                    pen.Width = r * 2f;
-                    pen.Color = Color.FromArgb((int)a, color);
-                    g.DrawLine(pen, a0.X, a0.Y, a1.X, a1.Y);
+                        pen.Width = r * 2f;
+                        pen.Color = Color.FromArgb((int)a, color);
+                        g.DrawPath(pen, trailPaths[b]);
 
-                    if (!minimal && f > 0.30f)
+                        if (!minimal && f > 0.30f)
+                        {
+                            pen.Width = r * 0.6f;
+                            pen.Color = Color.FromArgb((int)(a * 0.32f * coreGlow), 255, 255, 255);
+                            g.DrawPath(pen, trailPaths[b]);
+                        }
+                    }
+                }
+                finally
+                {
+                    for (int b = 0; b < TrailBands; b++)
                     {
-                        pen.Width = r * 0.6f;
-                        pen.Color = Color.FromArgb((int)(a * 0.32f * coreGlow), 255, 255, 255);
-                        g.DrawLine(pen, a0.X, a0.Y, a1.X, a1.Y);
+                        trailPaths[b].Dispose();
                     }
                 }
             }
