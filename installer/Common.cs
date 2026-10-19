@@ -14,7 +14,7 @@ namespace CursorCometSetup
     internal static class AppInfo
     {
         public const string Name = "Cursor Comet";
-        public const string Version = "1.4.2";
+        public const string Version = "1.4.3";
         public const string Exe = "cursor-comet.exe";
         public const string UninstallExe = "uninstall.exe";
         public const string AppResource = "CursorCometApp.exe";

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Cursor Comet")]
 [assembly: AssemblyDescription("Cursor Comet installer")]
 [assembly: AssemblyCompany("cwslz")]
-[assembly: AssemblyVersion("1.4.2.0")]
-[assembly: AssemblyFileVersion("1.4.2.0")]
+[assembly: AssemblyVersion("1.4.3.0")]
+[assembly: AssemblyFileVersion("1.4.3.0")]
 
 namespace CursorCometSetup
 {
@@ -228,8 +228,8 @@ namespace CursorCometSetup
             {
                 _uiScale = 1f;
             }
-            ClientSize = new Size(Scaled(460), Scaled(320));
-            MinimumSize = new Size(Scaled(400), Scaled(290));
+            Size = new Size(Scaled(578), Scaled(308));
+            MinimumSize = new Size(Scaled(520), Scaled(280));
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -238,7 +238,7 @@ namespace CursorCometSetup
 
             TableLayoutPanel root = new TableLayoutPanel();
             root.Dock = DockStyle.Fill;
-            root.Padding = new Padding(Scaled(12), Scaled(10), Scaled(12), Scaled(10));
+            root.Padding = new Padding(Scaled(10), Scaled(8), Scaled(10), Scaled(8));
             root.ColumnCount = 1;
             root.RowCount = 5;
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
@@ -259,7 +259,7 @@ namespace CursorCometSetup
 
             _content = new Panel();
             _content.Dock = DockStyle.Fill;
-            _content.Margin = new Padding(0, Scaled(8), 0, Scaled(8));
+            _content.Margin = new Padding(0, Scaled(6), 0, Scaled(6));
             root.Controls.Add(_content, 0, 2);
 
             BuildWelcomePage();
@@ -277,7 +277,7 @@ namespace CursorCometSetup
             footerLine.Dock = DockStyle.Top;
             footerLine.Height = Math.Max(1, Scaled(1));
             footerLine.BackColor = Color.FromArgb(200, 200, 200);
-            footerLine.Margin = new Padding(0, 0, 0, Scaled(6));
+            footerLine.Margin = new Padding(0, 0, 0, Scaled(4));
             root.Controls.Add(footerLine, 0, 3);
 
             BuildFooter(root);
@@ -314,7 +314,7 @@ namespace CursorCometSetup
             header.RowCount = 1;
             header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            header.Margin = new Padding(0, 0, 0, Scaled(6));
+            header.Margin = new Padding(0, 0, 0, Scaled(4));
 
             try
             {
@@ -402,9 +402,9 @@ namespace CursorCometSetup
         {
             Label title = new Label();
             title.AutoSize = true;
-            title.MaximumSize = new Size(Scaled(420), 0);
+            title.MaximumSize = new Size(Scaled(520), 0);
             title.Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 9.5f, FontStyle.Bold);
-            title.Margin = new Padding(0, 3, 0, 6);
+            title.Margin = new Padding(0, 2, 0, 4);
             return title;
         }
 
@@ -418,14 +418,14 @@ namespace CursorCometSetup
 
             _welcomeText = new Label();
             _welcomeText.AutoSize = true;
-            _welcomeText.MaximumSize = new Size(Scaled(420), 0);
-            _welcomeText.Margin = new Padding(0, 0, 0, 10);
+            _welcomeText.MaximumSize = new Size(Scaled(520), 0);
+            _welcomeText.Margin = new Padding(0, 0, 0, 8);
             layout.Controls.Add(_welcomeText, 0, 1);
 
             FlowLayoutPanel radios = new FlowLayoutPanel();
             radios.AutoSize = true;
             radios.WrapContents = false;
-            radios.Margin = new Padding(0, 0, 0, 10);
+            radios.Margin = new Padding(0, 0, 0, 8);
 
             _zhRadio = new RadioButton();
             _zhRadio.AutoSize = true;
@@ -470,12 +470,12 @@ namespace CursorCometSetup
             _licenseText.BorderStyle = BorderStyle.FixedSingle;
             _licenseText.BackColor = Color.White;
             _licenseText.Font = new Font(Font.FontFamily, 8.5f);
-            _licenseText.Margin = new Padding(0, 0, 0, 6);
+            _licenseText.Margin = new Padding(0, 0, 0, 4);
             layout.Controls.Add(_licenseText, 0, 1);
 
             _agree = new CheckBox();
             _agree.AutoSize = true;
-            _agree.Margin = new Padding(0, 2, 0, 1);
+            _agree.Margin = new Padding(0, 1, 0, 0);
             _agree.CheckedChanged += delegate { UpdateNextState(); };
             layout.Controls.Add(_agree, 0, 2);
 
@@ -528,7 +528,7 @@ namespace CursorCometSetup
             FlowLayoutPanel spaceRow = new FlowLayoutPanel();
             spaceRow.AutoSize = true;
             spaceRow.WrapContents = true;
-            spaceRow.Margin = new Padding(0, 2, 0, 10);
+            spaceRow.Margin = new Padding(0, 2, 0, 6);
 
             _spaceRequired = new Label();
             _spaceRequired.AutoSize = true;
@@ -549,7 +549,7 @@ namespace CursorCometSetup
             options.FlowDirection = FlowDirection.TopDown;
             options.AutoSize = true;
             options.WrapContents = false;
-            options.Margin = new Padding(0, 2, 0, 4);
+            options.Margin = new Padding(0, 2, 0, 2);
 
             _desktop = new CheckBox();
             _desktop.AutoSize = true;
@@ -564,7 +564,7 @@ namespace CursorCometSetup
 
             _locationNote = new Label();
             _locationNote.AutoSize = true;
-            _locationNote.MaximumSize = new Size(Scaled(420), 0);
+            _locationNote.MaximumSize = new Size(Scaled(520), 0);
             _locationNote.ForeColor = Color.Gray;
             _locationNote.Font = new Font(Font.FontFamily, 8f);
             _locationNote.Margin = new Padding(0, 2, 0, 0);
@@ -583,8 +583,8 @@ namespace CursorCometSetup
 
             _progressText = new Label();
             _progressText.AutoSize = true;
-            _progressText.MaximumSize = new Size(Scaled(420), 0);
-            _progressText.Margin = new Padding(0, 0, 0, 10);
+            _progressText.MaximumSize = new Size(Scaled(520), 0);
+            _progressText.Margin = new Padding(0, 0, 0, 8);
             layout.Controls.Add(_progressText, 0, 1);
 
             _progress = new ProgressBar();
@@ -593,7 +593,7 @@ namespace CursorCometSetup
             _progress.Value = 0;
             _progress.Height = 14;
             _progress.Dock = DockStyle.Top;
-            _progress.Margin = new Padding(0, 0, 0, 8);
+            _progress.Margin = new Padding(0, 0, 0, 6);
             layout.Controls.Add(_progress, 0, 2);
 
             _progressStatus = new Label();
@@ -614,8 +614,8 @@ namespace CursorCometSetup
 
             _completionText = new Label();
             _completionText.AutoSize = true;
-            _completionText.MaximumSize = new Size(Scaled(420), 0);
-            _completionText.Margin = new Padding(0, 0, 0, 12);
+            _completionText.MaximumSize = new Size(Scaled(520), 0);
+            _completionText.Margin = new Padding(0, 0, 0, 8);
             layout.Controls.Add(_completionText, 0, 1);
 
             _run = new CheckBox();
@@ -634,7 +634,7 @@ namespace CursorCometSetup
             footer.Dock = DockStyle.Fill;
             footer.AutoSize = true;
             footer.WrapContents = false;
-            footer.Margin = new Padding(0, Scaled(6), 0, 0);
+            footer.Margin = new Padding(0, Scaled(4), 0, 0);
 
             _cancel = MakeButton("取消");
             _cancel.Click += delegate
