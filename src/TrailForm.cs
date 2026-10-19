@@ -30,6 +30,8 @@ namespace MouseTrail
         private ToolStripMenuItem _lifeMenu;
         private ToolStripMenuItem _languageMenu;
         private ToolStripMenuItem _autoStartItem;
+        private MainForm _mainForm;
+        private readonly bool _openSettings;
 
         private bool _hotkeyRegistered;
         private bool _blackoutDone;
@@ -38,12 +40,13 @@ namespace MouseTrail
         private int _dpiTick;
         private float _dpiScale = 1f;
 
-        public TrailForm(AppSettings cfg)
+        public TrailForm(AppSettings cfg, bool openSettings)
         {
             _cfg = cfg;
+            _openSettings = openSettings;
             _screen = SystemInformation.VirtualScreen;
 
-            Text = L10n.T("鼠标拖尾", "Cursor Comet");
+            Text = "MouseTrailOverlay";
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             TopMost = true;
@@ -113,6 +116,11 @@ namespace MouseTrail
                     L10n.T("Ctrl + Alt + T 开关；右键托盘图标可以切换样式和颜色。",
                         "Ctrl + Alt + T to toggle; right-click the tray icon to change style and color."),
                     ToolTipIcon.Info);
+            }
+
+            if (_openSettings)
+            {
+                BeginInvoke(new MethodInvoker(OpenMain));
             }
         }
 
@@ -305,6 +313,7 @@ namespace MouseTrail
                     _menu.Show(Cursor.Position);
                 }
             };
+            _tray.DoubleClick += delegate { OpenMain(); };
             UpdateTrayText();
         }
 
@@ -320,6 +329,12 @@ namespace MouseTrail
             header.Enabled = false;
             header.Font = new Font(_menu.Font, FontStyle.Bold);
             _menu.Items.Add(header);
+            _menu.Items.Add(new ToolStripSeparator());
+
+            ToolStripMenuItem openItem = new ToolStripMenuItem(L10n.T("打开主界面", "Open settings"));
+            openItem.Font = new Font(_menu.Font, FontStyle.Bold);
+            openItem.Click += delegate { OpenMain(); };
+            _menu.Items.Add(openItem);
             _menu.Items.Add(new ToolStripSeparator());
 
             _enableItem = new ToolStripMenuItem(L10n.T("启用鼠标拖尾", "Enable cursor trail"));
@@ -366,6 +381,7 @@ namespace MouseTrail
             {
                 AutoStart.Set(!AutoStart.IsEnabled());
                 SyncMenu();
+                RefreshMainForm();
             };
             _menu.Items.Add(_autoStartItem);
 
@@ -380,6 +396,7 @@ namespace MouseTrail
                 _blackoutDone = false;
                 SyncMenu();
                 UpdateTrayText();
+                RefreshMainForm();
             };
             _menu.Items.Add(resetItem);
 
@@ -435,6 +452,7 @@ namespace MouseTrail
             EnsureSurface();
             _blackoutDone = false;
             SyncMenu();
+            RefreshMainForm();
         }
 
         private void SetLanguage(string language)
@@ -442,15 +460,74 @@ namespace MouseTrail
             _cfg.Language = language;
             _cfg.Save();
             L10n.Set(_cfg.ResolveLanguage());
-            Text = L10n.T("鼠标拖尾", "Cursor Comet");
+            Text = "MouseTrailOverlay";
 
+            RebuildMenu();
+            UpdateTrayText();
+            RefreshMainForm();
+        }
+
+        private void RebuildMenu()
+        {
             ContextMenuStrip old = _menu;
             BuildMenu();
             SyncMenu();
-            UpdateTrayText();
             if (old != null)
             {
                 BeginInvoke(new MethodInvoker(delegate { old.Dispose(); }));
+            }
+        }
+
+        private void OpenMain()
+        {
+            if (_mainForm == null || _mainForm.IsDisposed)
+            {
+                _mainForm = new MainForm(_cfg, MainSettingsChanged);
+                _mainForm.FormClosed += delegate { _mainForm = null; };
+            }
+
+            _mainForm.Show();
+            if (_mainForm.WindowState == FormWindowState.Minimized)
+            {
+                _mainForm.WindowState = FormWindowState.Normal;
+            }
+            _mainForm.Activate();
+            _mainForm.BringToFront();
+        }
+
+        internal void OpenMainFromSignal()
+        {
+            OpenMain();
+        }
+
+        private void MainSettingsChanged(bool languageChanged)
+        {
+            EnsureSurface();
+            if (!_cfg.Enabled)
+            {
+                _engine.Clear();
+                Blackout();
+            }
+            _blackoutDone = false;
+
+            if (languageChanged)
+            {
+                L10n.Set(_cfg.ResolveLanguage());
+                Text = "MouseTrailOverlay";
+                RebuildMenu();
+            }
+            else
+            {
+                SyncMenu();
+            }
+            UpdateTrayText();
+        }
+
+        private void RefreshMainForm()
+        {
+            if (_mainForm != null && !_mainForm.IsDisposed)
+            {
+                _mainForm.ReloadFromSettings();
             }
         }
 
@@ -495,6 +572,7 @@ namespace MouseTrail
 
             UpdateTrayText();
             SyncMenu();
+            RefreshMainForm();
         }
 
         private void UpdateTrayText()
@@ -509,7 +587,7 @@ namespace MouseTrail
 
         private void ShowAbout()
         {
-            string text = L10n.T("鼠标拖尾 v1.5.0", "Cursor Comet v1.5.0") + Environment.NewLine + Environment.NewLine;
+            string text = L10n.T("鼠标拖尾 v1.6.0", "Cursor Comet v1.6.0") + Environment.NewLine + Environment.NewLine;
             text += L10n.T("Ctrl + Alt + T  开关特效", "Ctrl + Alt + T  Toggle the effect") + Environment.NewLine;
             text += L10n.T("右键（或左键）托盘图标可以切换样式、颜色、粗细和时长。",
                 "Click or right-click the tray icon to change style, color, thickness and duration.") +

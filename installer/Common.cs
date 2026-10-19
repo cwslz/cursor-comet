@@ -14,7 +14,7 @@ namespace CursorCometSetup
     internal static class AppInfo
     {
         public const string Name = "Cursor Comet";
-        public const string Version = "1.5.0";
+        public const string Version = "1.6.0";
         public const string Exe = "cursor-comet.exe";
         public const string UninstallExe = "uninstall.exe";
         public const string AppResource = "CursorCometApp.exe";
@@ -261,6 +261,8 @@ namespace CursorCometSetup
                     shortcut, new object[] { targetPath });
                 shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null,
                     shortcut, new object[] { workingDir });
+                shortcutType.InvokeMember("Arguments", BindingFlags.SetProperty, null,
+                    shortcut, new object[] { "--settings" });
                 shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null,
                     shortcut, new object[] { targetPath + ",0" });
                 shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null,

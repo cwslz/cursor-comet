@@ -1,36 +1,63 @@
 using System;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace MouseTrail
 {
     internal static class Program
     {
+        private const string MutexName = "MouseTrail_SingleInstance_7C1E";
+        private const string OpenEventName = "MouseTrail_OpenSettings";
+
         [STAThread]
-        private static void Main()
+        private static void Main(string[] args)
         {
-            System.Windows.Forms.Application.EnableVisualStyles();
-            System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            bool openSettings = false;
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (string.Equals(args[i], "--settings", StringComparison.OrdinalIgnoreCase))
+                {
+                    openSettings = true;
+                }
+            }
 
             AppSettings settings = AppSettings.Load();
             L10n.Set(settings.ResolveLanguage());
 
             bool createdNew;
-            using (System.Threading.Mutex mutex = new System.Threading.Mutex(true, "MouseTrail_SingleInstance_7C1E", out createdNew))
+            using (Mutex mutex = new Mutex(true, MutexName, out createdNew))
             {
                 if (!createdNew)
                 {
-                    System.Windows.Forms.MessageBox.Show(
-                        L10n.T("鼠标拖尾已经在运行了，请查看屏幕右下角的托盘图标。",
-                            "Cursor Comet is already running. Check the tray icon near the clock."),
-                        L10n.T("鼠标拖尾", "Cursor Comet"),
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Information);
+                    try
+                    {
+                        using (EventWaitHandle ev = EventWaitHandle.OpenExisting(OpenEventName))
+                        {
+                            ev.Set();
+                        }
+                    }
+                    catch
+                    {
+                        MessageBox.Show(
+                            L10n.T("鼠标拖尾已经在运行了，请查看屏幕右下角的托盘图标。",
+                                "Cursor Comet is already running. Check the tray icon near the clock."),
+                            L10n.T("鼠标拖尾", "Cursor Comet"),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
                     return;
                 }
+
+                EventWaitHandle openEvent = new EventWaitHandle(
+                    false, EventResetMode.AutoReset, OpenEventName);
 
                 EnableDpiAwareness();
                 Native.timeBeginPeriod(1);
 
-                System.Windows.Forms.Application.ThreadException += delegate(object sender, System.Threading.ThreadExceptionEventArgs e)
+                Application.ThreadException += delegate(object sender, ThreadExceptionEventArgs e)
                 {
                     Log(e.Exception);
                 };
@@ -42,19 +69,39 @@ namespace MouseTrail
                 try
                 {
                     AutoStart.RepairIfNeeded();
-                    using (TrailForm form = new TrailForm(settings))
+                    using (TrailForm form = new TrailForm(settings, openSettings))
                     {
-                        System.Windows.Forms.Application.Run(form);
+                        Thread waiter = new Thread(delegate()
+                        {
+                            while (true)
+                            {
+                                if (openEvent.WaitOne())
+                                {
+                                    try
+                                    {
+                                        form.BeginInvoke(new MethodInvoker(form.OpenMainFromSignal));
+                                    }
+                                    catch
+                                    {
+                                    }
+                                }
+                            }
+                        });
+                        waiter.IsBackground = true;
+                        waiter.Name = "MouseTrail.OpenSettings";
+                        waiter.Start();
+
+                        Application.Run(form);
                     }
                 }
                 catch (Exception ex)
                 {
                     Log(ex);
-                    System.Windows.Forms.MessageBox.Show(
+                    MessageBox.Show(
                         L10n.T("启动失败：", "Failed to start: ") + ex.Message,
                         L10n.T("鼠标拖尾", "Cursor Comet"),
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Error);
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
                 }
                 finally
                 {

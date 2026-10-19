@@ -19,7 +19,7 @@ Download `CursorComet-Setup.exe` from [Releases](https://github.com/cwslz/cursor
 - Installs to `%LOCALAPPDATA%\Programs\CursorComet`; no administrator rights needed;
 - Classic Everything-style wizard: language → license → install location (with space info) → progress → finish; fixed 576×302 window;
 - The finish page can launch Cursor Comet; click “Finish” to close;
-- Creates a Start menu shortcut; optional desktop shortcut;
+- Creates a Start menu shortcut (opens the settings window); optional desktop shortcut;
 - Installs a standalone `uninstall.exe`, also listed in Settings → Apps;
 - The installer already contains the app; no separate exe download.
 
@@ -51,13 +51,23 @@ The tray menu can change:
 
 ## Features
 
+- **Material You settings window**: open it from the tray menu or by double-clicking the tray icon; sidebar sections on the left, cards on the right, freely resizable
 - **Bilingual UI**: switch language in the tray menu, installer and uninstaller
-- Portable build is a single exe (~56 KB); the installer is ~150 KB and contains the app plus a standalone `uninstall.exe`
+- Portable build is a single exe (~90 KB); the installer is ~175 KB and contains the app plus a standalone `uninstall.exe`
 - No Python, Node or .NET SDK required; uses the built-in .NET Framework 4.8
 - Per-pixel transparent + click-through (`WS_EX_LAYERED | WS_EX_TRANSPARENT`); normal clicking, dragging and typing are unaffected
 - Full-screen transparent overlay, trail fades by **fixed time**: fast movement makes it longer instead of clipping or breaking
 - High-DPI aware: thickness follows the system DPI
 - Settings are saved and restored
+
+## Settings window
+
+Open **Open settings** from the tray menu (or double-click the tray icon) to get the Material You settings window:
+
+- Left sidebar: Appearance, Color, Thickness, Duration, Behavior, Language; About and GitHub at the bottom;
+- Right side: card-based settings; the Appearance page can toggle the effect and switch between four styles;
+- The window is freely resizable; on narrow widths the sidebar collapses to icons and the content scrolls;
+- The settings window and the tray menu stay in sync, and language changes apply immediately.
 
 ## Language
 
@@ -130,6 +140,8 @@ cursor-comet/
 │  ├─ AppSettings.cs       # settings
 │  ├─ Palette.cs           # colors / HSV
 │  ├─ L10n.cs              # Chinese/English strings
+│  ├─ MainForm.cs          # Material You settings window
+│  ├─ MaterialUI.cs        # Material controls and palette
 │  ├─ IconFactory.cs       # runtime icon
 │  ├─ AutoStart.cs         # Windows startup
 │  └─ Native.cs            # Win32 declarations
