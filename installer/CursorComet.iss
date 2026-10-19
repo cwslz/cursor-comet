@@ -66,6 +66,9 @@ Name: "autostart"; Description: "{cm:AutoStart}"; GroupDescription: "{cm:Additio
 Source: "..\dist\cursor-comet.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
+[InstallDelete]
+Type: files; Name: "{app}\README.md"
+
 [Icons]
 Name: "{userprograms}\Cursor Comet"; Filename: "{app}\cursor-comet.exe"; Parameters: "--settings"; WorkingDir: "{app}"; Comment: "{cm:AppComment}"
 Name: "{autodesktop}\Cursor Comet"; Filename: "{app}\cursor-comet.exe"; Parameters: "--settings"; WorkingDir: "{app}"; Comment: "{cm:AppComment}"; Tasks: desktopicon
