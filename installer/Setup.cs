@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Cursor Comet")]
 [assembly: AssemblyDescription("Cursor Comet installer")]
 [assembly: AssemblyCompany("cwslz")]
-[assembly: AssemblyVersion("1.3.0.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
+[assembly: AssemblyVersion("1.4.0.0")]
+[assembly: AssemblyFileVersion("1.4.0.0")]
 
 namespace CursorCometSetup
 {
@@ -160,35 +160,43 @@ namespace CursorCometSetup
     internal sealed class SetupForm : Form
     {
         private Panel _content;
-        private Label _subtitle;
-        private Label _stepLabel;
+        private Label _headerTitle;
+        private Label _headerSubtitle;
 
-        private Panel _languagePage;
-        private Label _languageIntro;
+        private Panel _welcomePage;
+        private Label _welcomeTitle;
+        private Label _welcomeText;
+        private Label _welcomeNote;
         private RadioButton _zhRadio;
         private RadioButton _enRadio;
-        private Label _languageNote;
 
         private Panel _licensePage;
         private Label _licenseTitle;
         private TextBox _licenseText;
         private CheckBox _agree;
+        private Label _licenseNote;
 
         private Panel _locationPage;
         private Label _locationTitle;
         private Label _pathLabel;
         private TextBox _path;
         private Button _browse;
+        private Label _spaceRequired;
+        private Label _spaceAvailable;
         private CheckBox _desktop;
         private CheckBox _autoStart;
-        private CheckBox _launch;
         private Label _locationNote;
 
         private Panel _progressPage;
         private Label _progressTitle;
+        private Label _progressText;
         private ProgressBar _progress;
         private Label _progressStatus;
-        private Label _progressDetail;
+
+        private Panel _completionPage;
+        private Label _completionTitle;
+        private Label _completionText;
+        private CheckBox _run;
 
         private Button _back;
         private Button _next;
@@ -197,54 +205,90 @@ namespace CursorCometSetup
         private int _page;
         private bool _applyingLanguage;
         private bool _installing;
-        private bool _installDone;
+        private string _installedDir;
+        private float _uiScale = 1f;
 
         internal SetupForm()
         {
             Text = "Cursor Comet Setup";
-            ClientSize = new Size(700, 500);
-            MinimumSize = new Size(620, 440);
+            AutoScaleDimensions = new SizeF(96f, 96f);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            try
+            {
+                using (Graphics graphics = CreateGraphics())
+                {
+                    _uiScale = graphics.DpiX / 96f;
+                }
+            }
+            catch
+            {
+                _uiScale = 1f;
+            }
+            if (_uiScale < 1f)
+            {
+                _uiScale = 1f;
+            }
+            ClientSize = new Size(Scaled(600), Scaled(440));
+            MinimumSize = new Size(Scaled(520), Scaled(400));
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
-            AutoScaleMode = AutoScaleMode.Dpi;
             Font = new Font(L.IsChinese ? "Microsoft YaHei UI" : "Segoe UI", 9f);
 
             TableLayoutPanel root = new TableLayoutPanel();
             root.Dock = DockStyle.Fill;
-            root.Padding = new Padding(20, 16, 20, 16);
+            root.Padding = new Padding(Scaled(18), Scaled(14), Scaled(18), Scaled(14));
             root.ColumnCount = 1;
-            root.RowCount = 3;
+            root.RowCount = 5;
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, Math.Max(1, Scaled(1))));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, Math.Max(1, Scaled(1))));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             root.Controls.Add(BuildHeader(), 0, 0);
 
+            Panel headerLine = new Panel();
+            headerLine.Dock = DockStyle.Top;
+            headerLine.Height = Math.Max(1, Scaled(1));
+            headerLine.BackColor = Color.FromArgb(200, 200, 200);
+            headerLine.Margin = new Padding(0, 0, 0, 0);
+            root.Controls.Add(headerLine, 0, 1);
+
             _content = new Panel();
             _content.Dock = DockStyle.Fill;
-            _content.Margin = new Padding(0, 14, 0, 10);
-            root.Controls.Add(_content, 0, 1);
+            _content.Margin = new Padding(0, Scaled(10), 0, Scaled(10));
+            root.Controls.Add(_content, 0, 2);
 
-            BuildLanguagePage();
+            BuildWelcomePage();
             BuildLicensePage();
             BuildLocationPage();
             BuildProgressPage();
-            _content.Controls.Add(_languagePage);
+            BuildCompletionPage();
+            _content.Controls.Add(_welcomePage);
             _content.Controls.Add(_licensePage);
             _content.Controls.Add(_locationPage);
             _content.Controls.Add(_progressPage);
+            _content.Controls.Add(_completionPage);
+
+            Panel footerLine = new Panel();
+            footerLine.Dock = DockStyle.Top;
+            footerLine.Height = Math.Max(1, Scaled(1));
+            footerLine.BackColor = Color.FromArgb(200, 200, 200);
+            footerLine.Margin = new Padding(0, 0, 0, Scaled(8));
+            root.Controls.Add(footerLine, 0, 3);
 
             BuildFooter(root);
-
             Controls.Add(root);
 
             string installedDir = InstallRegistry.GetInstalledDir();
             _path.Text = !string.IsNullOrEmpty(installedDir) && File.Exists(Path.Combine(installedDir, AppInfo.Exe))
                 ? installedDir
                 : AppPaths.DefaultDir;
+            _path.TextChanged += delegate { UpdateSpace(); };
+            UpdateSpace();
 
             Load += delegate
             {
@@ -269,6 +313,7 @@ namespace CursorCometSetup
             header.RowCount = 1;
             header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            header.Margin = new Padding(0, 0, 0, Scaled(8));
 
             try
             {
@@ -278,9 +323,9 @@ namespace CursorCometSetup
                     Icon = appIcon;
                     PictureBox picture = new PictureBox();
                     picture.Image = appIcon.ToBitmap();
-                    picture.Size = new Size(48, 48);
+                    picture.Size = new Size(Scaled(32), Scaled(32));
                     picture.SizeMode = PictureBoxSizeMode.StretchImage;
-                    picture.Margin = new Padding(0, 0, 14, 0);
+                    picture.Margin = new Padding(0, 0, Scaled(10), 0);
                     header.Controls.Add(picture, 0, 0);
                 }
             }
@@ -292,62 +337,86 @@ namespace CursorCometSetup
             text.AutoSize = true;
             text.Dock = DockStyle.Fill;
             text.ColumnCount = 1;
-            text.RowCount = 3;
+            text.RowCount = 2;
             text.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             text.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             text.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            text.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            Label title = new Label();
-            title.Text = AppInfo.Name;
-            title.Font = new Font(Font.FontFamily, 16f, FontStyle.Bold);
-            title.AutoSize = true;
-            title.Margin = new Padding(0, 0, 0, 1);
-            text.Controls.Add(title, 0, 0);
+            _headerTitle = new Label();
+            _headerTitle.Text = "Cursor Comet Setup";
+            _headerTitle.Font = new Font(Font.FontFamily, 12f, FontStyle.Bold);
+            _headerTitle.AutoSize = true;
+            _headerTitle.Margin = new Padding(0, 0, 0, 1);
+            text.Controls.Add(_headerTitle, 0, 0);
 
-            _subtitle = new Label();
-            _subtitle.AutoSize = true;
-            _subtitle.ForeColor = Color.Gray;
-            _subtitle.Margin = new Padding(0, 0, 0, 2);
-            text.Controls.Add(_subtitle, 0, 1);
-
-            _stepLabel = new Label();
-            _stepLabel.AutoSize = true;
-            _stepLabel.ForeColor = Color.Gray;
-            _stepLabel.Font = new Font(Font.FontFamily, 8.5f);
-            _stepLabel.Margin = new Padding(0, 0, 0, 0);
-            text.Controls.Add(_stepLabel, 0, 2);
+            _headerSubtitle = new Label();
+            _headerSubtitle.AutoSize = true;
+            _headerSubtitle.ForeColor = Color.Gray;
+            _headerSubtitle.Font = new Font(Font.FontFamily, 8.5f);
+            _headerSubtitle.Margin = new Padding(0, 0, 0, 0);
+            text.Controls.Add(_headerSubtitle, 0, 1);
 
             header.Controls.Add(text, 1, 0);
             return header;
         }
 
-        private void BuildLanguagePage()
+        private Panel NewPage()
         {
-            _languagePage = new Panel();
-            _languagePage.Dock = DockStyle.Fill;
-            _languagePage.Visible = false;
+            Panel page = new Panel();
+            page.Dock = DockStyle.Fill;
+            page.Visible = false;
+            return page;
+        }
 
+        private static TableLayoutPanel NewLayout(int rows, int percentRow)
+        {
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
-            layout.RowCount = 4;
+            layout.RowCount = rows;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            for (int i = 0; i < rows; i++)
+            {
+                layout.RowStyles.Add(i == percentRow
+                    ? new RowStyle(SizeType.Percent, 100f)
+                    : new RowStyle(SizeType.AutoSize));
+            }
+            return layout;
+        }
 
-            _languageIntro = new Label();
-            _languageIntro.AutoSize = true;
-            _languageIntro.Font = new Font(Font.FontFamily, 10f, FontStyle.Bold);
-            _languageIntro.Margin = new Padding(0, 6, 0, 14);
-            layout.Controls.Add(_languageIntro, 0, 0);
+        private int Scaled(int value)
+        {
+            return (int)Math.Round(value * _uiScale);
+        }
+
+        private Label NewTitle()
+        {
+            Label title = new Label();
+            title.AutoSize = true;
+            title.MaximumSize = new Size(Scaled(560), 0);
+            title.Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 10f, FontStyle.Bold);
+            title.Margin = new Padding(0, 4, 0, 8);
+            return title;
+        }
+
+        private void BuildWelcomePage()
+        {
+            _welcomePage = NewPage();
+            TableLayoutPanel layout = NewLayout(5, 4);
+
+            _welcomeTitle = NewTitle();
+            layout.Controls.Add(_welcomeTitle, 0, 0);
+
+            _welcomeText = new Label();
+            _welcomeText.AutoSize = true;
+            _welcomeText.MaximumSize = new Size(Scaled(560), 0);
+            _welcomeText.Margin = new Padding(0, 0, 0, 14);
+            layout.Controls.Add(_welcomeText, 0, 1);
 
             FlowLayoutPanel radios = new FlowLayoutPanel();
             radios.AutoSize = true;
             radios.WrapContents = false;
-            radios.Margin = new Padding(0, 0, 0, 12);
+            radios.Margin = new Padding(0, 0, 0, 10);
 
             _zhRadio = new RadioButton();
             _zhRadio.AutoSize = true;
@@ -363,38 +432,24 @@ namespace CursorCometSetup
             _enRadio.Font = new Font(Font.FontFamily, 11f);
             _enRadio.CheckedChanged += LanguageChanged;
             radios.Controls.Add(_enRadio);
+            layout.Controls.Add(radios, 0, 2);
 
-            layout.Controls.Add(radios, 0, 1);
+            _welcomeNote = new Label();
+            _welcomeNote.AutoSize = true;
+            _welcomeNote.ForeColor = Color.Gray;
+            _welcomeNote.Font = new Font(Font.FontFamily, 8.5f);
+            _welcomeNote.Margin = new Padding(0, 0, 0, 0);
+            layout.Controls.Add(_welcomeNote, 0, 3);
 
-            _languageNote = new Label();
-            _languageNote.AutoSize = true;
-            _languageNote.ForeColor = Color.Gray;
-            _languageNote.MaximumSize = new Size(620, 0);
-            layout.Controls.Add(_languageNote, 0, 2);
-
-            _languagePage.Controls.Add(layout);
+            _welcomePage.Controls.Add(layout);
         }
 
         private void BuildLicensePage()
         {
-            _licensePage = new Panel();
-            _licensePage.Dock = DockStyle.Fill;
-            _licensePage.Visible = false;
+            _licensePage = NewPage();
+            TableLayoutPanel layout = NewLayout(4, 1);
 
-            TableLayoutPanel layout = new TableLayoutPanel();
-            layout.Dock = DockStyle.Fill;
-            layout.ColumnCount = 1;
-            layout.RowCount = 4;
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-            _licenseTitle = new Label();
-            _licenseTitle.AutoSize = true;
-            _licenseTitle.Font = new Font(Font.FontFamily, 10f, FontStyle.Bold);
-            _licenseTitle.Margin = new Padding(0, 6, 0, 8);
+            _licenseTitle = NewTitle();
             layout.Controls.Add(_licenseTitle, 0, 0);
 
             _licenseText = new TextBox();
@@ -406,48 +461,31 @@ namespace CursorCometSetup
             _licenseText.BorderStyle = BorderStyle.FixedSingle;
             _licenseText.BackColor = Color.White;
             _licenseText.Font = new Font(Font.FontFamily, 9f);
-            _licenseText.Margin = new Padding(0, 0, 0, 10);
+            _licenseText.Margin = new Padding(0, 0, 0, 8);
             layout.Controls.Add(_licenseText, 0, 1);
 
             _agree = new CheckBox();
             _agree.AutoSize = true;
-            _agree.Margin = new Padding(0, 4, 0, 4);
+            _agree.Margin = new Padding(0, 4, 0, 2);
             _agree.CheckedChanged += delegate { UpdateNextState(); };
             layout.Controls.Add(_agree, 0, 2);
 
-            Label note = new Label();
-            note.AutoSize = true;
-            note.ForeColor = Color.Gray;
-            note.Font = new Font(Font.FontFamily, 8.5f);
-            note.MaximumSize = new Size(620, 0);
-            note.Margin = new Padding(0, 2, 0, 0);
-            note.Text = L.T("安装程序本身同样以 GPL-3.0 发布。", "The installer itself is also released under GPL-3.0.");
-            layout.Controls.Add(note, 0, 3);
+            _licenseNote = new Label();
+            _licenseNote.AutoSize = true;
+            _licenseNote.ForeColor = Color.Gray;
+            _licenseNote.Font = new Font(Font.FontFamily, 8.5f);
+            _licenseNote.Margin = new Padding(0, 0, 0, 0);
+            layout.Controls.Add(_licenseNote, 0, 3);
 
             _licensePage.Controls.Add(layout);
         }
 
         private void BuildLocationPage()
         {
-            _locationPage = new Panel();
-            _locationPage.Dock = DockStyle.Fill;
-            _locationPage.Visible = false;
+            _locationPage = NewPage();
+            TableLayoutPanel layout = NewLayout(6, 5);
 
-            TableLayoutPanel layout = new TableLayoutPanel();
-            layout.Dock = DockStyle.Fill;
-            layout.ColumnCount = 1;
-            layout.RowCount = 5;
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
-            _locationTitle = new Label();
-            _locationTitle.AutoSize = true;
-            _locationTitle.Font = new Font(Font.FontFamily, 10f, FontStyle.Bold);
-            _locationTitle.Margin = new Padding(0, 6, 0, 12);
+            _locationTitle = NewTitle();
             layout.Controls.Add(_locationTitle, 0, 0);
 
             TableLayoutPanel pathRow = new TableLayoutPanel();
@@ -478,11 +516,31 @@ namespace CursorCometSetup
             pathRow.Controls.Add(_browse, 2, 0);
             layout.Controls.Add(pathRow, 0, 1);
 
+            FlowLayoutPanel spaceRow = new FlowLayoutPanel();
+            spaceRow.AutoSize = true;
+            spaceRow.WrapContents = true;
+            spaceRow.Margin = new Padding(0, 2, 0, 10);
+
+            _spaceRequired = new Label();
+            _spaceRequired.AutoSize = true;
+            _spaceRequired.ForeColor = Color.Gray;
+            _spaceRequired.Font = new Font(Font.FontFamily, 8.5f);
+            _spaceRequired.Margin = new Padding(0, 0, 24, 0);
+            spaceRow.Controls.Add(_spaceRequired);
+
+            _spaceAvailable = new Label();
+            _spaceAvailable.AutoSize = true;
+            _spaceAvailable.ForeColor = Color.Gray;
+            _spaceAvailable.Font = new Font(Font.FontFamily, 8.5f);
+            _spaceAvailable.Margin = new Padding(0, 0, 0, 0);
+            spaceRow.Controls.Add(_spaceAvailable);
+            layout.Controls.Add(spaceRow, 0, 2);
+
             FlowLayoutPanel options = new FlowLayoutPanel();
             options.FlowDirection = FlowDirection.TopDown;
             options.AutoSize = true;
             options.WrapContents = false;
-            options.Margin = new Padding(0, 6, 0, 8);
+            options.Margin = new Padding(0, 2, 0, 6);
 
             _desktop = new CheckBox();
             _desktop.AutoSize = true;
@@ -493,46 +551,32 @@ namespace CursorCometSetup
             _autoStart.AutoSize = true;
             _autoStart.Margin = new Padding(0, 3, 0, 3);
             options.Controls.Add(_autoStart);
-
-            _launch = new CheckBox();
-            _launch.AutoSize = true;
-            _launch.Checked = true;
-            _launch.Margin = new Padding(0, 3, 0, 3);
-            options.Controls.Add(_launch);
             layout.Controls.Add(options, 0, 3);
 
             _locationNote = new Label();
             _locationNote.AutoSize = true;
+            _locationNote.MaximumSize = new Size(Scaled(560), 0);
             _locationNote.ForeColor = Color.Gray;
-            _locationNote.MaximumSize = new Size(620, 0);
-            _locationNote.Margin = new Padding(0, 2, 0, 10);
-            layout.Controls.Add(_locationNote, 0, 2);
+            _locationNote.Font = new Font(Font.FontFamily, 8.5f);
+            _locationNote.Margin = new Padding(0, 4, 0, 0);
+            layout.Controls.Add(_locationNote, 0, 4);
 
             _locationPage.Controls.Add(layout);
         }
 
         private void BuildProgressPage()
         {
-            _progressPage = new Panel();
-            _progressPage.Dock = DockStyle.Fill;
-            _progressPage.Visible = false;
+            _progressPage = NewPage();
+            TableLayoutPanel layout = NewLayout(5, 4);
 
-            TableLayoutPanel layout = new TableLayoutPanel();
-            layout.Dock = DockStyle.Fill;
-            layout.ColumnCount = 1;
-            layout.RowCount = 5;
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
-            _progressTitle = new Label();
-            _progressTitle.AutoSize = true;
-            _progressTitle.Font = new Font(Font.FontFamily, 10f, FontStyle.Bold);
-            _progressTitle.Margin = new Padding(0, 6, 0, 14);
+            _progressTitle = NewTitle();
             layout.Controls.Add(_progressTitle, 0, 0);
+
+            _progressText = new Label();
+            _progressText.AutoSize = true;
+            _progressText.MaximumSize = new Size(Scaled(560), 0);
+            _progressText.Margin = new Padding(0, 0, 0, 14);
+            layout.Controls.Add(_progressText, 0, 1);
 
             _progress = new ProgressBar();
             _progress.Minimum = 0;
@@ -541,20 +585,37 @@ namespace CursorCometSetup
             _progress.Height = 18;
             _progress.Dock = DockStyle.Top;
             _progress.Margin = new Padding(0, 0, 0, 12);
-            layout.Controls.Add(_progress, 0, 1);
+            layout.Controls.Add(_progress, 0, 2);
 
             _progressStatus = new Label();
             _progressStatus.AutoSize = true;
-            _progressStatus.Margin = new Padding(0, 0, 0, 6);
-            layout.Controls.Add(_progressStatus, 0, 2);
-
-            _progressDetail = new Label();
-            _progressDetail.AutoSize = true;
-            _progressDetail.ForeColor = Color.Gray;
-            _progressDetail.MaximumSize = new Size(620, 0);
-            layout.Controls.Add(_progressDetail, 0, 3);
+            _progressStatus.Margin = new Padding(0, 0, 0, 0);
+            layout.Controls.Add(_progressStatus, 0, 3);
 
             _progressPage.Controls.Add(layout);
+        }
+
+        private void BuildCompletionPage()
+        {
+            _completionPage = NewPage();
+            TableLayoutPanel layout = NewLayout(4, 3);
+
+            _completionTitle = NewTitle();
+            layout.Controls.Add(_completionTitle, 0, 0);
+
+            _completionText = new Label();
+            _completionText.AutoSize = true;
+            _completionText.MaximumSize = new Size(Scaled(560), 0);
+            _completionText.Margin = new Padding(0, 0, 0, 16);
+            layout.Controls.Add(_completionText, 0, 1);
+
+            _run = new CheckBox();
+            _run.AutoSize = true;
+            _run.Checked = true;
+            _run.Margin = new Padding(0, 2, 0, 2);
+            layout.Controls.Add(_run, 0, 2);
+
+            _completionPage.Controls.Add(layout);
         }
 
         private void BuildFooter(TableLayoutPanel root)
@@ -564,7 +625,7 @@ namespace CursorCometSetup
             footer.Dock = DockStyle.Fill;
             footer.AutoSize = true;
             footer.WrapContents = false;
-            footer.Margin = new Padding(0, 8, 0, 0);
+            footer.Margin = new Padding(0, Scaled(8), 0, 0);
 
             _cancel = MakeButton("取消");
             _cancel.Click += delegate
@@ -585,7 +646,7 @@ namespace CursorCometSetup
             _back.Click += BackClicked;
             footer.Controls.Add(_back);
 
-            root.Controls.Add(footer, 0, 2);
+            root.Controls.Add(footer, 0, 4);
         }
 
         private Button MakeButton(string text)
@@ -593,7 +654,7 @@ namespace CursorCometSetup
             Button button = new Button();
             button.Text = text;
             button.AutoSize = true;
-            button.MinimumSize = new Size(96, 32);
+            button.MinimumSize = new Size(Scaled(88), Scaled(30));
             button.Margin = new Padding(6, 0, 0, 0);
             return button;
         }
@@ -617,33 +678,46 @@ namespace CursorCometSetup
             _applyingLanguage = false;
 
             Text = L.T("Cursor Comet 安装程序", "Cursor Comet Setup");
-            _subtitle.Text = L.T("Windows 鼠标拖尾特效 · 安装程序", "Windows cursor trail effect · Setup");
+            _headerTitle.Text = L.T("Cursor Comet 安装程序", "Cursor Comet Setup");
+            _headerSubtitle.Text = L.T("Windows 鼠标拖尾特效 · 安装程序", "Windows cursor trail effect · Setup");
 
-            _languageIntro.Text = L.T("请选择安装程序的语言：", "Choose the language for the installer:");
-            _languageNote.Text = L.T("安装完成后，应用也会使用该语言。",
-                "The app will use this language after installation.");
+            _welcomeTitle.Text = L.T("欢迎使用 Cursor Comet 安装向导",
+                "Welcome to the Cursor Comet Setup Wizard");
+            _welcomeText.Text = L.T("将在这台电脑上安装 Cursor Comet。请选择安装程序和应用使用的语言，然后点击“下一步”。",
+                "This will install Cursor Comet on your computer. Choose the language for the installer and the app, then click Next.");
+            _welcomeNote.Text = L.T("点击“下一步”继续。", "Click Next to continue.");
 
-            _licenseTitle.Text = L.T("许可协议", "License agreement");
+            _licenseTitle.Text = L.T("许可协议", "License Agreement");
             _licenseText.Text = L.T(AgreementZh(), AgreementEn());
-            _agree.Text = L.T("我已阅读并同意以上协议", "I have read and accept the agreement");
+            _agree.Text = L.T("我接受许可协议中的条款", "I accept the terms in the License Agreement");
+            _licenseNote.Text = L.T("需要接受协议才能继续安装。", "You must accept the agreement to continue.");
 
-            _locationTitle.Text = L.T("安装位置", "Install location");
-            _pathLabel.Text = L.T("安装到", "Install to");
+            _locationTitle.Text = L.T("选择安装位置", "Choose Install Location");
+            _pathLabel.Text = L.T("目标文件夹", "Destination Folder");
             _browse.Text = L.T("浏览…", "Browse…");
             _desktop.Text = L.T("创建桌面快捷方式", "Create desktop shortcut");
             _autoStart.Text = L.T("开机自动启动", "Start with Windows");
-            _launch.Text = L.T("安装完成后启动", "Launch after install");
-            RefreshLocationNote();
+            _locationNote.Text = L.T("安装到当前用户目录，不需要管理员权限。",
+                "Installs for the current user; no administrator rights required.");
 
-            _progressTitle.Text = L.T("正在安装 Cursor Comet", "Installing Cursor Comet");
-            if (!_installing && !_installDone)
+            _progressTitle.Text = L.T("正在安装", "Installing");
+            _progressText.Text = L.T("正在安装 Cursor Comet，请稍候。",
+                "Please wait while Cursor Comet is being installed.");
+            if (!_installing)
             {
                 _progressStatus.Text = L.T("准备安装…", "Ready to install.");
             }
 
+            _completionTitle.Text = L.T("正在完成 Cursor Comet 安装向导",
+                "Completing the Cursor Comet Setup Wizard");
+            _completionText.Text = L.T("Cursor Comet 已安装到你的电脑。\r\n点击“完成”关闭向导。",
+                "Cursor Comet has been installed on your computer.\r\nClick Finish to close this wizard.");
+            _run.Text = L.T("启动 Cursor Comet", "Launch Cursor Comet");
+
             _back.Text = L.T("上一步", "Back");
             _cancel.Text = L.T("取消", "Cancel");
 
+            UpdateSpace();
             ShowPage(_page);
         }
 
@@ -665,60 +739,94 @@ namespace CursorCometSetup
                    "By continuing, you confirm that you have read and accept these terms.";
         }
 
-        private void RefreshLocationNote()
+        private void UpdateSpace()
         {
-            string installed = InstallRegistry.GetInstalledDir();
-            bool installedHere = !string.IsNullOrEmpty(installed) &&
-                                 File.Exists(Path.Combine(installed, AppInfo.Exe)) &&
-                                 string.Equals(_path.Text.Trim().TrimEnd('\\'),
-                                     installed.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
-            _locationNote.Text = installedHere
-                ? L.T("已安装到该位置，可以覆盖安装。", "Already installed here. You can reinstall.")
-                : L.T("默认安装到当前用户目录，不需要管理员权限。",
-                    "Installs for the current user; no administrator rights required.");
+            if (_spaceRequired == null)
+            {
+                return;
+            }
+
+            long required = ResourceSize(AppInfo.AppResource) + ResourceSize(AppInfo.UninstallResource);
+            _spaceRequired.Text = L.T("所需空间：", "Space required: ") + FormatSize(required);
+
+            string available = "—";
+            try
+            {
+                string full = Path.GetFullPath(_path.Text);
+                string root = Path.GetPathRoot(full);
+                if (!string.IsNullOrEmpty(root) && Directory.Exists(root))
+                {
+                    DriveInfo drive = new DriveInfo(root);
+                    available = FormatSize(drive.AvailableFreeSpace);
+                }
+            }
+            catch
+            {
+            }
+            _spaceAvailable.Text = L.T("可用空间：", "Space available: ") + available;
+        }
+
+        private static long ResourceSize(string name)
+        {
+            try
+            {
+                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
+                {
+                    return stream == null ? 0 : stream.Length;
+                }
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static string FormatSize(long bytes)
+        {
+            if (bytes >= 1024L * 1024 * 1024)
+            {
+                return (bytes / 1024.0 / 1024.0 / 1024.0).ToString("0.#") + " GB";
+            }
+            if (bytes >= 1024L * 1024)
+            {
+                return (bytes / 1024.0 / 1024.0).ToString("0.#") + " MB";
+            }
+            return Math.Max(1L, (long)Math.Round(bytes / 1024.0)) + " KB";
         }
 
         private void ShowPage(int page)
         {
             _page = page;
-            _languagePage.Visible = page == 0;
+            _welcomePage.Visible = page == 0;
             _licensePage.Visible = page == 1;
             _locationPage.Visible = page == 2;
             _progressPage.Visible = page == 3;
+            _completionPage.Visible = page == 4;
 
             _back.Visible = page == 1 || page == 2;
             _cancel.Visible = page < 3;
-            _next.Visible = true;
+            _next.Visible = page != 3;
 
             if (page == 0)
             {
-                _stepLabel.Text = L.T("第 1 步，共 3 步", "Step 1 of 3");
                 _next.Text = L.T("下一步", "Next");
                 _next.Enabled = true;
             }
             else if (page == 1)
             {
-                _stepLabel.Text = L.T("第 2 步，共 3 步", "Step 2 of 3");
                 _next.Text = L.T("下一步", "Next");
                 _next.Enabled = _agree.Checked;
             }
             else if (page == 2)
             {
-                _stepLabel.Text = L.T("第 3 步，共 3 步", "Step 3 of 3");
                 _next.Text = L.T("安装", "Install");
                 _next.Enabled = true;
-                RefreshLocationNote();
+                UpdateSpace();
             }
-            else
+            else if (page == 4)
             {
-                _stepLabel.Text = _installDone
-                    ? L.T("安装完成", "Done")
-                    : L.T("正在安装", "Installing");
-                _progressTitle.Text = _installDone
-                    ? L.T("安装完成", "Installation complete")
-                    : L.T("正在安装 Cursor Comet", "Installing Cursor Comet");
                 _next.Text = L.T("完成", "Finish");
-                _next.Enabled = _installDone;
+                _next.Enabled = true;
             }
         }
 
@@ -769,9 +877,9 @@ namespace CursorCometSetup
             {
                 StartInstall();
             }
-            else if (_page == 3 && _installDone)
+            else if (_page == 4)
             {
-                Close();
+                Finish();
             }
         }
 
@@ -786,7 +894,7 @@ namespace CursorCometSetup
                 {
                     _path.Text = dialog.SelectedPath;
                     _path.SelectionStart = 0;
-                    RefreshLocationNote();
+                    UpdateSpace();
                 }
             }
         }
@@ -802,14 +910,13 @@ namespace CursorCometSetup
             }
 
             _installing = true;
-            _installDone = false;
+            _installedDir = dir;
             ShowPage(3);
             _progress.Value = 0;
             _progressStatus.Text = L.T("正在准备…", "Preparing…");
-            _progressDetail.Text = string.Empty;
             Application.DoEvents();
 
-            int result = Installer.Install(dir, _desktop.Checked, _autoStart.Checked, true, _launch.Checked,
+            int result = Installer.Install(dir, _desktop.Checked, _autoStart.Checked, true, false,
                 delegate(int percent, string status)
                 {
                     if (percent < _progress.Minimum)
@@ -829,11 +936,7 @@ namespace CursorCometSetup
             _installing = false;
             if (result == 0)
             {
-                _installDone = true;
-                _progress.Value = 100;
-                _progressStatus.Text = L.T("安装完成。", "Installation complete.");
-                _progressDetail.Text = L.T("安装位置：", "Installed to: ") + dir;
-                ShowPage(3);
+                ShowPage(4);
             }
             else
             {
@@ -842,6 +945,25 @@ namespace CursorCometSetup
                     AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ShowPage(2);
             }
+        }
+
+        private void Finish()
+        {
+            try
+            {
+                if (_run.Checked && !string.IsNullOrEmpty(_installedDir))
+                {
+                    Process.Start(new ProcessStartInfo(Path.Combine(_installedDir, AppInfo.Exe))
+                    {
+                        WorkingDirectory = _installedDir,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch
+            {
+            }
+            Close();
         }
     }
 }

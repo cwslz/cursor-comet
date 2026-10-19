@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.4.0 — 2026-10-19
+
+### 新增
+
+- 安装器改为参考 Everything 的经典 NSIS 向导结构：
+  - 欢迎 + 语言选择
+  - License Agreement（勾选接受后才能继续）
+  - Choose Install Location（目标文件夹、所需空间、可用空间）
+  - Installing（进度条和阶段提示）
+  - Completing（“启动 Cursor Comet”复选框 + 完成）
+- 安装器改为紧凑布局：600×440，顶部图标 + 标题 + 分隔线，底部标准 上一步/下一步/取消 按钮。
+- 支持 DPI 缩放（在 200% 缩放下按比例放大）。
+- “启动 Cursor Comet”移到完成页，安装过程中不再提前启动。
+
 ## v1.3.0 — 2026-10-18
 
 ### 新增
