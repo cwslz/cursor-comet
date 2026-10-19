@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace MouseTrail
@@ -20,7 +21,11 @@ namespace MouseTrail
         }
 
         private const string RepoUrl = "https://github.com/cwslz/cursor-comet";
-        private const string AppVersion = "1.6.2";
+        private const string AppVersion = "1.7.0";
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int WM_NCHITTEST = 0x84;
+        private const int HTCAPTION = 2;
+        private const int HTCLIENT = 1;
 
         private readonly AppSettings _cfg;
         private readonly Action<bool> _changed;
@@ -38,6 +43,7 @@ namespace MouseTrail
         private Label _sectionTitle;
         private Label _sectionSubtitle;
         private FlowLayoutPanel _cards;
+        private WindowButton _maxButton;
         private bool _loading;
         private bool _collapsed;
         private float _dpiScale = 1f;
@@ -52,6 +58,7 @@ namespace MouseTrail
             ForeColor = MaterialColors.OnSurface;
             Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 9.5f);
             AutoScaleMode = AutoScaleMode.None;
+            FormBorderStyle = FormBorderStyle.None;
             try
             {
                 using (Graphics graphics = CreateGraphics())
@@ -101,7 +108,133 @@ namespace MouseTrail
         {
             base.OnResize(e);
             UpdateResponsive();
+            UpdateMaximizeIcon();
         }
+
+        private WindowButton MakeWindowButton(WindowButtonIcon icon, string tip)
+        {
+            WindowButton button = new WindowButton();
+            button.Icon = icon;
+            button.UiScale = _dpiScale;
+            button.Width = (int)(38 * _dpiScale);
+            button.Height = (int)(32 * _dpiScale);
+            button.Margin = new Padding(0, 0, (int)(2 * _dpiScale), 0);
+            _toolTip.SetToolTip(button, tip);
+            return button;
+        }
+
+        private void AttachWindowDrag(Control control)
+        {
+            control.MouseDown += delegate(object sender, MouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    ReleaseCapture();
+                    SendMessage(Handle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
+                }
+            };
+            control.DoubleClick += delegate { ToggleMaximize(); };
+        }
+
+        private void ToggleMaximize()
+        {
+            if (WindowState == FormWindowState.Maximized)
+            {
+                WindowState = FormWindowState.Normal;
+            }
+            else
+            {
+                UpdateMaximizedBounds();
+                WindowState = FormWindowState.Maximized;
+            }
+        }
+
+        private void UpdateMaximizeIcon()
+        {
+            if (_maxButton == null)
+            {
+                return;
+            }
+            bool maximized = WindowState == FormWindowState.Maximized;
+            _maxButton.Icon = maximized ? WindowButtonIcon.Restore : WindowButtonIcon.Maximize;
+            _toolTip.SetToolTip(_maxButton, maximized ? L10n.T("还原", "Restore") : L10n.T("最大化", "Maximize"));
+            _maxButton.Invalidate();
+        }
+
+        private void UpdateMaximizedBounds()
+        {
+            try
+            {
+                MaximizedBounds = Screen.FromControl(this).WorkingArea;
+            }
+            catch
+            {
+            }
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            try
+            {
+                int preference = 2;
+                DwmSetWindowAttribute(Handle, 33, ref preference, 4);
+            }
+            catch
+            {
+            }
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            UpdateMaximizedBounds();
+            UpdateMaximizeIcon();
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+            if (m.Msg == WM_NCHITTEST && (int)m.Result == HTCLIENT &&
+                WindowState == FormWindowState.Normal)
+            {
+                int raw = m.LParam.ToInt32();
+                Point screen = new Point((short)(raw & 0xFFFF), (short)((raw >> 16) & 0xFFFF));
+                Point point = PointToClient(screen);
+                int border = Math.Max(4, (int)(6 * _dpiScale));
+                bool left = point.X < border;
+                bool right = point.X > ClientSize.Width - border;
+                bool top = point.Y < border;
+                bool bottom = point.Y > ClientSize.Height - border;
+                if (top && left) m.Result = (IntPtr)13;
+                else if (top && right) m.Result = (IntPtr)14;
+                else if (bottom && left) m.Result = (IntPtr)16;
+                else if (bottom && right) m.Result = (IntPtr)17;
+                else if (left) m.Result = (IntPtr)10;
+                else if (right) m.Result = (IntPtr)11;
+                else if (top) m.Result = (IntPtr)12;
+                else if (bottom) m.Result = (IntPtr)15;
+            }
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ClassStyle |= 0x00020000;
+                return cp;
+            }
+        }
+
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attribute, ref int value, int size);
 
         private void BuildLayout()
         {
@@ -150,14 +283,15 @@ namespace MouseTrail
             TableLayoutPanel header = new TableLayoutPanel();
             header.AutoSize = true;
             header.Dock = DockStyle.Top;
-            header.ColumnCount = 1;
+            header.ColumnCount = 2;
             header.RowCount = 2;
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             header.Padding = new Padding(
                 (int)(32 * _dpiScale), (int)(26 * _dpiScale),
-                (int)(32 * _dpiScale), (int)(8 * _dpiScale));
+                (int)(16 * _dpiScale), (int)(8 * _dpiScale));
             header.BackColor = MaterialColors.Surface;
 
             _sectionTitle = new Label();
@@ -175,6 +309,32 @@ namespace MouseTrail
             _sectionSubtitle.BackColor = MaterialColors.Surface;
             _sectionSubtitle.Margin = new Padding(0, 0, 0, 0);
             header.Controls.Add(_sectionSubtitle, 0, 1);
+
+            FlowLayoutPanel windowControls = new FlowLayoutPanel();
+            windowControls.AutoSize = true;
+            windowControls.WrapContents = false;
+            windowControls.FlowDirection = FlowDirection.RightToLeft;
+            windowControls.BackColor = MaterialColors.Surface;
+            windowControls.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            windowControls.Margin = new Padding(0, (int)(2 * _dpiScale), 0, 0);
+
+            WindowButton closeButton = MakeWindowButton(WindowButtonIcon.Close, L10n.T("关闭", "Close"));
+            closeButton.Click += delegate { Close(); };
+            _maxButton = MakeWindowButton(WindowButtonIcon.Maximize, L10n.T("最大化", "Maximize"));
+            _maxButton.Click += delegate { ToggleMaximize(); };
+            WindowButton minButton = MakeWindowButton(WindowButtonIcon.Minimize, L10n.T("最小化", "Minimize"));
+            minButton.Click += delegate { WindowState = FormWindowState.Minimized; };
+
+            windowControls.Controls.Add(closeButton);
+            windowControls.Controls.Add(_maxButton);
+            windowControls.Controls.Add(minButton);
+            header.Controls.Add(windowControls, 1, 0);
+            header.SetRowSpan(windowControls, 2);
+
+            AttachWindowDrag(header);
+            AttachWindowDrag(_sectionTitle);
+            AttachWindowDrag(_sectionSubtitle);
+
             content.Controls.Add(header, 0, 0);
 
             _cards = new FlowLayoutPanel();
@@ -213,6 +373,7 @@ namespace MouseTrail
                     picture.SizeMode = PictureBoxSizeMode.StretchImage;
                     picture.Margin = new Padding(0, 0, (int)(10 * _dpiScale), 0);
                     header.Controls.Add(picture, 0, 0);
+                    AttachWindowDrag(picture);
                 }
             }
             catch
@@ -246,6 +407,11 @@ namespace MouseTrail
 
             header.Controls.Add(text, 1, 0);
             _sidebar.Controls.Add(header, 0, 0);
+
+            AttachWindowDrag(header);
+            AttachWindowDrag(text);
+            AttachWindowDrag(_appTitle);
+            AttachWindowDrag(_appSubtitle);
         }
 
         private void BuildNavList()

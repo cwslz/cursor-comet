@@ -954,4 +954,109 @@ namespace MouseTrail
             base.OnMouseLeave(e);
         }
     }
-}
+
+    internal enum WindowButtonIcon
+    {
+        Minimize,
+        Maximize,
+        Restore,
+        Close
+    }
+
+    internal sealed class WindowButton : Control
+    {
+        public WindowButtonIcon Icon = WindowButtonIcon.Minimize;
+        public float UiScale = 1f;
+
+        private bool _hover;
+
+        public WindowButton()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
+                     ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+            Width = 38;
+            Height = 32;
+            Cursor = Cursors.Hand;
+            TabStop = false;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Color parentColor = Parent != null ? Parent.BackColor : MaterialColors.Surface;
+            using (SolidBrush back = new SolidBrush(parentColor))
+            {
+                e.Graphics.FillRectangle(back, ClientRectangle);
+            }
+
+            if (_hover)
+            {
+                Color fill = Icon == WindowButtonIcon.Close
+                    ? MaterialColors.Error
+                    : MaterialColors.SurfaceContainerHigh;
+                Rectangle hover = new Rectangle(
+                    (int)(4 * UiScale), (int)(3 * UiScale),
+                    Width - (int)(8 * UiScale), Height - (int)(6 * UiScale));
+                using (GraphicsPath path = MaterialDraw.RoundRect(hover, (int)(8 * UiScale)))
+                using (SolidBrush brush = new SolidBrush(fill))
+                {
+                    e.Graphics.FillPath(brush, path);
+                }
+            }
+
+            Color color = _hover && Icon == WindowButtonIcon.Close
+                ? Color.White
+                : MaterialColors.OnSurfaceVariant;
+            using (Pen pen = new Pen(color, Math.Max(1f, 1.2f * UiScale)))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+                int cx = Width / 2;
+                int cy = Height / 2;
+                int s = Math.Max(4, (int)(5 * UiScale));
+                if (Icon == WindowButtonIcon.Minimize)
+                {
+                    e.Graphics.DrawLine(pen, cx - s, cy + (int)(1 * UiScale), cx + s, cy + (int)(1 * UiScale));
+                }
+                else if (Icon == WindowButtonIcon.Maximize)
+                {
+                    e.Graphics.DrawRectangle(pen, cx - s, cy - s, s * 2, s * 2);
+                }
+                else if (Icon == WindowButtonIcon.Restore)
+                {
+                    e.Graphics.DrawRectangle(pen, cx - s + (int)(2 * UiScale), cy - s, s * 2, s * 2);
+                    e.Graphics.DrawRectangle(pen, cx - s, cy - s + (int)(2 * UiScale), s * 2, s * 2);
+                }
+                else
+                {
+                    e.Graphics.DrawLine(pen, cx - s, cy - s, cx + s, cy + s);
+                    e.Graphics.DrawLine(pen, cx + s, cy - s, cx - s, cy + s);
+                }
+            }
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs pevent)
+        {
+            Color parentColor = Parent != null ? Parent.BackColor : MaterialColors.Surface;
+            using (SolidBrush brush = new SolidBrush(parentColor))
+            {
+                pevent.Graphics.FillRectangle(brush, ClientRectangle);
+            }
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            _hover = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _hover = false;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+    }}
