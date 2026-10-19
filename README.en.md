@@ -36,23 +36,22 @@ The app has no main window; it appears in the notification area. Move the mouse 
 | Action | Description |
 | --- | --- |
 | `Ctrl + Alt + T` | Enable / pause the effect |
-| Left / right click the tray icon | Open the settings menu |
+| Left / right click the tray icon | Open the tray menu |
 | Tray menu → Exit | Quit the app |
 
-The tray menu can change:
+The tray menu has exactly four items:
 
-- **Style**: Comet / Rainbow / Sparks / Minimal
-- **Color**: Ice Blue / Violet / Sakura Pink / Gold / Mint / White
-- **Thickness**: Fine / Standard / Bold
-- **Duration**: Short (0.45 s) / Medium (0.7 s) / Long (1 s)
-- **Language**: Auto / 中文 / English
-- **Start with Windows**
-- **Reset to defaults**
+- **Cursor Comet**: title;
+- **Open main window**: opens the Fluent Design settings window;
+- **Enable cursor trail**: check/uncheck to control the effect;
+- **Exit**: quit the app.
+
+Style, color, thickness, duration, language and auto-start live in the main window.
 
 ## Features
 
-- **Material You settings window**: open it from the tray menu or by double-clicking the tray icon; sidebar sections on the left, cards on the right, freely resizable
-- **Bilingual UI**: switch language in the tray menu, installer and uninstaller
+- **Fluent Design settings window**: open it from the tray menu or by double-clicking the tray icon; sidebar sections on the left, cards on the right, freely resizable
+- **Bilingual UI**: switch language in the main window, installer and uninstaller
 - Portable build is a single exe (~100 KB); the installer is ~190 KB and contains the app plus a standalone `uninstall.exe`
 - No Python, Node or .NET SDK required; uses the built-in .NET Framework 4.8
 - Per-pixel transparent + click-through (`WS_EX_LAYERED | WS_EX_TRANSPARENT`); normal clicking, dragging and typing are unaffected
@@ -62,14 +61,14 @@ The tray menu can change:
 
 ## Settings window
 
-Open **Open settings** from the tray menu (or double-click the tray icon) to get the Material You settings window:
+Open **Open main window** from the tray menu (or double-click the tray icon) to get the Fluent Design settings window:
 
-- Left sidebar: Appearance, Color, Behavior, Language; About and GitHub at the bottom; thickness and duration live in Appearance → Thickness and duration;
+- Left sidebar: Appearance, Color, Halo, Behavior, Language; About and GitHub at the bottom; thickness and duration live in Appearance → Thickness and duration;
 - Right side: card-based settings; the Appearance page can toggle the effect, switch between four styles and tune style parameters;
 - In rainbow mode the Color page only shows guidance; rainbow settings live in Appearance → Style parameters;
 - Frameless window: drag from the brand area or the header, minimize/maximize/close at the top-right, resize from the edges;
 - The window is freely resizable; on narrow widths the sidebar collapses to icons and the content scrolls;
-- The settings window and the tray menu stay in sync, and language changes apply immediately.
+- The enable state is synced between the settings window and the tray, and language changes apply immediately.
 
 ## Style parameters
 
@@ -77,12 +76,23 @@ Settings → Appearance → **Style parameters** adjusts the effects of the curr
 
 | Style | Parameters |
 | --- | --- |
-| Comet | Glow |
+| Comet | Glow moved to Halo |
 | Rainbow | Speed, saturation, hue offset |
 | Sparks | Rate, size, life, speed |
 | Minimal | Width, opacity |
 
-In rainbow mode, the Color page switches to a Rainbow settings page; the color palette is not used, and the tray color menu is disabled.
+## Halo
+
+Settings → **Halo**:
+
+- **Glow**: toggle + radius / strength / color; for Comet the glow follows the trail and fades with it, while other styles show the glow on the cursor; the color can be Auto or a fixed color, independent of rainbow mode;
+- **Halo**: toggle + radius / thickness / opacity / color; an independent ring around the cursor.
+
+Each can be enabled separately, both at once, or both off. The halo does not depend on the trail style and stays on the cursor after the trail fades out; turning off **Enable cursor trail** only stops the trail, while the glow and halo stay visible.
+
+The comet's Style parameters show a note that the glow has moved to Halo, with a button to jump there.
+
+In rainbow mode, the Color page only shows guidance; the color palette is not used, and rainbow settings live in Appearance → Style parameters.
 
 ## Language
 
@@ -155,7 +165,7 @@ cursor-comet/
 │  ├─ AppSettings.cs       # settings
 │  ├─ Palette.cs           # colors / HSV
 │  ├─ L10n.cs              # Chinese/English strings
-│  ├─ MainForm.cs          # Material You settings window
+│  ├─ MainForm.cs          # Fluent Design settings window
 │  ├─ MaterialUI.cs        # Material controls and palette
 │  ├─ IconFactory.cs       # runtime icon
 │  ├─ AutoStart.cs         # Windows startup
@@ -192,10 +202,13 @@ cursor-comet/
 Check that the tray icon still exists and “Enable cursor trail” is checked; press `Ctrl + Alt + T`; exclusive full-screen games may cover the overlay — use borderless windowed mode.
 
 **How do I disable auto-start?**
-Uncheck “Start with Windows” in the tray menu, or delete `MouseTrail` under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
+Uncheck “Start with Windows” in the main window → Behavior, or delete `MouseTrail` under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
 
 **How do I switch language?**
-Tray menu → Language; the installer and uninstaller also have a language dropdown. Changes in the app apply immediately and are saved.
+Main window → Language; the installer and uninstaller also have a language dropdown. Changes in the app apply immediately and are saved.
+
+**Why does OBS not capture the trail?**
+The trail is a per-pixel layered window, which OBS's BitBlt Window Capture cannot capture. Use **Display Capture**, or set the Window Capture method to **Windows 10 (1903 and newer)**; **Game Capture** usually cannot capture it either.
 
 **How do I uninstall the installed version?**
 Settings → Apps → Installed apps → Cursor Comet, or run `%LOCALAPPDATA%\Programs\CursorComet\uninstall.exe`. The uninstaller removes shortcuts and the uninstall entry; settings are kept by default (there is a checkbox to delete them).

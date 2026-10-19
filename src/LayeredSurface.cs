@@ -27,6 +27,8 @@ namespace MouseTrail
             _width = width;
             _height = height;
 
+            try
+            {
             _screenDc = Native.GetDC(IntPtr.Zero);
             _memDc = Native.CreateCompatibleDC(_screenDc);
 
@@ -52,6 +54,12 @@ namespace MouseTrail
             _graphics.CompositingQuality = CompositingQuality.HighSpeed;
             _graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
             _graphics.Clear(Color.Transparent);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public int Width

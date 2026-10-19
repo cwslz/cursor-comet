@@ -13,23 +13,18 @@ namespace MouseTrail
     internal sealed class TrailForm : Form
     {
         private const int HotkeyId = 0x4D54;
+        private const int WM_DISPLAYCHANGE = 0x007E;
 
         private readonly AppSettings _cfg;
         private readonly TrailEngine _engine = new TrailEngine();
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private readonly System.Windows.Forms.Timer _timer;
-        private readonly Rectangle _screen;
+        private Rectangle _screen;
 
         private LayeredSurface _surface;
         private NotifyIcon _tray;
         private ContextMenuStrip _menu;
         private ToolStripMenuItem _enableItem;
-        private ToolStripMenuItem _styleMenu;
-        private ToolStripMenuItem _colorMenu;
-        private ToolStripMenuItem _sizeMenu;
-        private ToolStripMenuItem _lifeMenu;
-        private ToolStripMenuItem _languageMenu;
-        private ToolStripMenuItem _autoStartItem;
         private MainForm _mainForm;
         private readonly bool _openSettings;
 
@@ -39,6 +34,12 @@ namespace MouseTrail
         private int _errorCount;
         private int _dpiTick;
         private float _dpiScale = 1f;
+        private float _lastCursorX;
+        private float _lastCursorY;
+        private bool _hasLastCursor;
+        private bool _haloDirty = true;
+        private bool _hadContent;
+        private double _colorTime;
 
         public TrailForm(AppSettings cfg, bool openSettings)
         {
@@ -113,8 +114,8 @@ namespace MouseTrail
                 _cfg.Save();
                 _tray.ShowBalloonTip(5000,
                     L10n.T("鼠标拖尾已启动", "Cursor Comet is running"),
-                    L10n.T("Ctrl + Alt + T 开关；右键托盘图标可以切换样式和颜色。",
-                        "Ctrl + Alt + T to toggle; right-click the tray icon to change style and color."),
+                    L10n.T("Ctrl + Alt + T 开关；右键托盘图标可以打开主界面。",
+                        "Ctrl + Alt + T to toggle; right-click the tray icon to open the main window."),
                     ToolTipIcon.Info);
             }
 
@@ -203,6 +204,17 @@ namespace MouseTrail
 
         protected override void WndProc(ref Message m)
         {
+            if (m.Msg == WM_DISPLAYCHANGE)
+            {
+                try
+                {
+                    BeginInvoke(new MethodInvoker(UpdateDisplayBounds));
+                }
+                catch
+                {
+                }
+            }
+
             if (m.Msg == Native.WM_HOTKEY && m.WParam.ToInt32() == HotkeyId)
             {
                 SetEnabled(!_cfg.Enabled);
@@ -220,7 +232,15 @@ namespace MouseTrail
 
             try
             {
-                if (!_cfg.Enabled || !IsHandleCreated)
+                if (!IsHandleCreated)
+                {
+                    Blackout();
+                    return;
+                }
+
+                bool glow = _cfg.GlowEnabled && _cfg.GlowStrength > 0.001;
+                bool halo = _cfg.HaloEnabled;
+                if (!_cfg.Enabled && !glow && !halo)
                 {
                     Blackout();
                     return;
@@ -240,19 +260,49 @@ namespace MouseTrail
                     RefreshDpi();
                 }
 
-                bool hasContent = _engine.Update(now, cursor.X, cursor.Y, _cfg, _dpiScale);
-                if (!hasContent)
+                bool hasContent = false;
+                if (_cfg.Enabled)
+                {
+                    hasContent = _engine.Update(now, cursor.X, cursor.Y, _cfg, _dpiScale);
+                }
+                else if (_engine.Samples.Count > 0)
+                {
+                    _engine.Clear();
+                }
+
+                if (!hasContent && !glow && !halo)
                 {
                     Blackout();
                     return;
                 }
 
+                bool moved = !_hasLastCursor ||
+                    cursor.X != _lastCursorX || cursor.Y != _lastCursorY;
+                bool contentEnded = _hadContent && !hasContent;
+                if (!hasContent && (glow || halo) && !moved && !_haloDirty && !contentEnded)
+                {
+                    return;
+                }
+
+                if (moved)
+                {
+                    // 每个移动帧都推进彩虹颜色，不必等新的轨迹采样点。
+                    _colorTime = now;
+                }
+
                 Graphics g = _surface.Graphics;
                 g.Clear(Color.Transparent);
-                TrailRenderer.Render(g, _engine, _cfg, now, _screen.Left, _screen.Top,
-                    cursor.X - _screen.Left, cursor.Y - _screen.Top, _dpiScale);
+                bool drawGhost = moved && _hasLastCursor;
+                TrailRenderer.Render(g, _engine, _cfg, now, _colorTime, _screen.Left, _screen.Top,
+                    cursor.X - _screen.Left, cursor.Y - _screen.Top,
+                    _lastCursorX - _screen.Left, _lastCursorY - _screen.Top, drawGhost, _dpiScale);
                 _surface.Present(Handle, _screen.Left, _screen.Top);
                 _blackoutDone = false;
+                _lastCursorX = cursor.X;
+                _lastCursorY = cursor.Y;
+                _hasLastCursor = true;
+                _haloDirty = false;
+                _hadContent = hasContent;
             }
             catch (Exception ex)
             {
@@ -297,6 +347,45 @@ namespace MouseTrail
                 old.Dispose();
             }
             _blackoutDone = false;
+            _haloDirty = true;
+            _hasLastCursor = false;
+            _hadContent = false;
+        }
+
+        /// <summary>插拔显示器或改分辨率后，重新覆盖整个虚拟屏幕。</summary>
+        private void UpdateDisplayBounds()
+        {
+            if (_closing || !IsHandleCreated)
+            {
+                return;
+            }
+
+            try
+            {
+                Rectangle screen = SystemInformation.VirtualScreen;
+                if (screen.Width <= 0 || screen.Height <= 0)
+                {
+                    return;
+                }
+                if (screen == _screen && Bounds == screen)
+                {
+                    return;
+                }
+
+                _screen = screen;
+                Bounds = screen;
+                EnsureSurface();
+                _engine.Clear();
+                _blackoutDone = false;
+                _haloDirty = true;
+                _hasLastCursor = false;
+                _hadContent = false;
+                RefreshDpi();
+            }
+            catch (Exception ex)
+            {
+                Program.Log(ex);
+            }
         }
 
         private void BuildTray()
@@ -320,8 +409,7 @@ namespace MouseTrail
         private void BuildMenu()
         {
             _menu = new ContextMenuStrip();
-            _menu.Font = new Font(L10n.T("Microsoft YaHei UI", "Segoe UI"), 9f,
-                FontStyle.Regular, GraphicsUnit.Point);
+            _menu.Font = FluentFonts.Create(9.5f, FontStyle.Regular);
             _menu.ShowImageMargin = false;
             _menu.ShowCheckMargin = true;
 
@@ -329,82 +417,15 @@ namespace MouseTrail
             header.Enabled = false;
             header.Font = new Font(_menu.Font, FontStyle.Bold);
             _menu.Items.Add(header);
-            _menu.Items.Add(new ToolStripSeparator());
 
-            ToolStripMenuItem openItem = new ToolStripMenuItem(L10n.T("打开主界面", "Open settings"));
+            ToolStripMenuItem openItem = new ToolStripMenuItem(L10n.T("打开主界面", "Open main window"));
             openItem.Font = new Font(_menu.Font, FontStyle.Bold);
             openItem.Click += delegate { OpenMain(); };
             _menu.Items.Add(openItem);
-            _menu.Items.Add(new ToolStripSeparator());
 
             _enableItem = new ToolStripMenuItem(L10n.T("启用鼠标拖尾", "Enable cursor trail"));
             _enableItem.Click += delegate { SetEnabled(!_cfg.Enabled); };
             _menu.Items.Add(_enableItem);
-
-            _styleMenu = new ToolStripMenuItem(L10n.T("样式", "Style"));
-            AddChoice(_styleMenu, L10n.T("流光", "Comet"), "comet");
-            AddChoice(_styleMenu, L10n.T("彩虹", "Rainbow"), "rainbow");
-            AddChoice(_styleMenu, L10n.T("星火", "Sparks"), "sparks");
-            AddChoice(_styleMenu, L10n.T("细线", "Minimal"), "minimal");
-            _menu.Items.Add(_styleMenu);
-
-            _colorMenu = new ToolStripMenuItem(L10n.T("颜色", "Color"));
-            for (int i = 0; i < Palette.Definitions.Length; i++)
-            {
-                ColorDef def = Palette.Definitions[i];
-                AddChoice(_colorMenu, L10n.T(def.Zh, def.En), def.Key);
-            }
-            _menu.Items.Add(_colorMenu);
-
-            _sizeMenu = new ToolStripMenuItem(L10n.T("粗细", "Thickness"));
-            AddChoice(_sizeMenu, L10n.T("纤细", "Fine"), "0.7");
-            AddChoice(_sizeMenu, L10n.T("标准", "Standard"), "1");
-            AddChoice(_sizeMenu, L10n.T("醒目", "Bold"), "1.45");
-            _menu.Items.Add(_sizeMenu);
-
-            _lifeMenu = new ToolStripMenuItem(L10n.T("时长", "Duration"));
-            AddChoice(_lifeMenu, L10n.T("短", "Short"), "0.45");
-            AddChoice(_lifeMenu, L10n.T("中", "Medium"), "0.7");
-            AddChoice(_lifeMenu, L10n.T("长", "Long"), "1");
-            _menu.Items.Add(_lifeMenu);
-
-            _languageMenu = new ToolStripMenuItem("语言 / Language");
-            AddChoice(_languageMenu, L10n.T("自动（跟随系统）", "Auto (system)"), "auto");
-            AddChoice(_languageMenu, "中文", "zh");
-            AddChoice(_languageMenu, "English", "en");
-            _menu.Items.Add(_languageMenu);
-
-            _menu.Items.Add(new ToolStripSeparator());
-
-            _autoStartItem = new ToolStripMenuItem(L10n.T("开机自动启动", "Start with Windows"));
-            _autoStartItem.Click += delegate
-            {
-                AutoStart.Set(!AutoStart.IsEnabled());
-                SyncMenu();
-                RefreshMainForm();
-            };
-            _menu.Items.Add(_autoStartItem);
-
-            ToolStripMenuItem resetItem = new ToolStripMenuItem(L10n.T("恢复默认设置", "Reset to defaults"));
-            resetItem.Click += delegate
-            {
-                _cfg.Reset();
-                _cfg.Enabled = true;
-                _cfg.Save();
-                EnsureSurface();
-                _engine.Clear();
-                _blackoutDone = false;
-                SyncMenu();
-                UpdateTrayText();
-                RefreshMainForm();
-            };
-            _menu.Items.Add(resetItem);
-
-            ToolStripMenuItem aboutItem = new ToolStripMenuItem(L10n.T("关于", "About"));
-            aboutItem.Click += delegate { ShowAbout(); };
-            _menu.Items.Add(aboutItem);
-
-            _menu.Items.Add(new ToolStripSeparator());
 
             ToolStripMenuItem exitItem = new ToolStripMenuItem(L10n.T("退出", "Exit"));
             exitItem.Click += delegate { Close(); };
@@ -413,60 +434,6 @@ namespace MouseTrail
             _menu.Opening += delegate(object sender, CancelEventArgs e) { SyncMenu(); };
             _tray.ContextMenuStrip = _menu;
         }
-
-        private void AddChoice(ToolStripMenuItem parent, string text, string value)
-        {
-            ToolStripMenuItem item = new ToolStripMenuItem(text);
-            item.Tag = value;
-            ToolStripMenuItem owner = parent;
-            item.Click += delegate { OnChoice(owner, value); };
-            parent.DropDownItems.Add(item);
-        }
-
-        private void OnChoice(ToolStripMenuItem parent, string value)
-        {
-            if (parent == _languageMenu)
-            {
-                SetLanguage(value);
-                return;
-            }
-
-            if (parent == _styleMenu)
-            {
-                _cfg.Style = value;
-            }
-            else if (parent == _colorMenu)
-            {
-                _cfg.ColorName = value;
-            }
-            else if (parent == _sizeMenu)
-            {
-                _cfg.Scale = AppSettings.ParseFloat(value, 1f);
-            }
-            else if (parent == _lifeMenu)
-            {
-                _cfg.Life = AppSettings.ParseDouble(value, 0.7);
-            }
-
-            _cfg.Save();
-            EnsureSurface();
-            _blackoutDone = false;
-            SyncMenu();
-            RefreshMainForm();
-        }
-
-        private void SetLanguage(string language)
-        {
-            _cfg.Language = language;
-            _cfg.Save();
-            L10n.Set(_cfg.ResolveLanguage());
-            Text = "MouseTrailOverlay";
-
-            RebuildMenu();
-            UpdateTrayText();
-            RefreshMainForm();
-        }
-
         private void RebuildMenu()
         {
             ContextMenuStrip old = _menu;
@@ -506,9 +473,11 @@ namespace MouseTrail
             if (!_cfg.Enabled)
             {
                 _engine.Clear();
-                Blackout();
             }
             _blackoutDone = false;
+            _haloDirty = true;
+            _hasLastCursor = false;
+            _hadContent = false;
 
             if (languageChanged)
             {
@@ -537,41 +506,18 @@ namespace MouseTrail
             {
                 return;
             }
-
             _enableItem.Checked = _cfg.Enabled;
-            SyncChoices(_styleMenu, _cfg.Style);
-            SyncChoices(_colorMenu, _cfg.ColorName);
-            SyncChoices(_sizeMenu, _cfg.Scale.ToString("0.###", CultureInfo.InvariantCulture));
-            SyncChoices(_lifeMenu, _cfg.Life.ToString("0.##", CultureInfo.InvariantCulture));
-            SyncChoices(_languageMenu, _cfg.Language);
-            if (_colorMenu != null)
-            {
-                _colorMenu.Enabled = _cfg.Style != "rainbow";
-            }
-            _autoStartItem.Checked = AutoStart.IsEnabled();
         }
-
-        private static void SyncChoices(ToolStripMenuItem parent, string value)
-        {
-            for (int i = 0; i < parent.DropDownItems.Count; i++)
-            {
-                ToolStripMenuItem item = parent.DropDownItems[i] as ToolStripMenuItem;
-                if (item != null)
-                {
-                    item.Checked = string.Equals(item.Tag as string, value, StringComparison.Ordinal);
-                }
-            }
-        }
-
         private void SetEnabled(bool enabled)
         {
             _cfg.Enabled = enabled;
             _cfg.Save();
+            _haloDirty = true;
+            _hadContent = false;
 
             if (!enabled)
             {
                 _engine.Clear();
-                Blackout();
             }
 
             UpdateTrayText();
@@ -583,28 +529,20 @@ namespace MouseTrail
         {
             if (_tray != null)
             {
-                _tray.Text = _cfg.Enabled
-                    ? L10n.T("鼠标拖尾 · 运行中", "Cursor Comet · Running")
-                    : L10n.T("鼠标拖尾 · 已暂停", "Cursor Comet · Paused");
+                if (_cfg.Enabled)
+                {
+                    _tray.Text = L10n.T("鼠标拖尾 · 运行中", "Cursor Comet · Running");
+                }
+                else if (_cfg.GlowEnabled || _cfg.HaloEnabled)
+                {
+                    _tray.Text = L10n.T("鼠标拖尾 · 拖尾已关闭", "Cursor Comet · Trail off");
+                }
+                else
+                {
+                    _tray.Text = L10n.T("鼠标拖尾 · 已暂停", "Cursor Comet · Paused");
+                }
             }
         }
 
-        private void ShowAbout()
-        {
-            string text = L10n.T("鼠标拖尾 v1.7.0", "Cursor Comet v1.7.0") + Environment.NewLine + Environment.NewLine;
-            text += L10n.T("Ctrl + Alt + T  开关特效", "Ctrl + Alt + T  Toggle the effect") + Environment.NewLine;
-            text += L10n.T("右键（或左键）托盘图标可以切换样式、颜色、粗细和时长。",
-                "Click or right-click the tray icon to change style, color, thickness and duration.") +
-                Environment.NewLine + Environment.NewLine;
-            if (!_hotkeyRegistered)
-            {
-                text += L10n.T("提示：全局快捷键被其他程序占用了，可以在托盘菜单里操作。",
-                    "Note: the global hotkey is used by another program; use the tray menu instead.") +
-                    Environment.NewLine + Environment.NewLine;
-            }
-            text += L10n.T("配置文件：", "Config file: ") + AppSettings.FilePath;
-            MessageBox.Show(text, L10n.T("关于鼠标拖尾", "About Cursor Comet"),
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
     }
 }

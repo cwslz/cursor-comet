@@ -8,7 +8,7 @@ namespace MouseTrail
     /// <summary>把轨迹点绘制成流光 / 彩虹 / 星火 / 细线。</summary>
     internal static class TrailRenderer
     {
-        private const float StampSpacing = 1.25f;
+        private const float StampSpacing = 2.0f;
         private const float MaxRadius = 4.8f;
         private const int MaxCometStamps = 1400;
         private const int MaxMinimalStamps = 1600;
@@ -21,7 +21,8 @@ namespace MouseTrail
         }
 
         public static void Render(Graphics g, TrailEngine engine, AppSettings cfg, double now,
-            int originX, int originY, float headX, float headY, float dpiScale)
+            double colorTime, int originX, int originY, float headX, float headY,
+            float ghostX, float ghostY, bool drawGhost, float dpiScale)
         {
             Color baseColor = Palette.Get(cfg.ColorName);
             List<TrailEngine.Sample> samples = engine.Samples;
@@ -33,39 +34,57 @@ namespace MouseTrail
             }
 
             Color headColor = cfg.Style == "rainbow"
-                ? Palette.Hsv((now * cfg.RainbowSpeed * 0.14 + cfg.RainbowOffset) % 1.0,
+                ? Palette.Hsv((colorTime * cfg.RainbowSpeed + cfg.RainbowOffset) % 1.0,
                     cfg.RainbowSaturation, 1.0)
                 : baseColor;
-            if (headFade > 0.01f)
+            Color glowColor = ResolveEffectColor(cfg.GlowColor, headColor);
+            Color haloColor = ResolveEffectColor(cfg.HaloColor, headColor);
+
+            if (cfg.GlowEnabled && cfg.GlowStrength > 0.001)
             {
-                float headGlow = cfg.Style == "comet"
-                    ? (float)cfg.CometGlow
-                    : (cfg.Style == "minimal" ? (float)cfg.MinimalOpacity : 1f);
-                DrawHeadGlow(g, headX, headY, headColor, cfg.Scale * dpiScale * headGlow, headFade);
+                if (cfg.Style == "comet")
+                {
+                    if (!cfg.Enabled)
+                    {
+                        // 拖尾关闭时没有拖尾可跟随，光晕退回到光标周围，保持可见。
+                        DrawCursorGlow(g, cfg, glowColor, headX, headY, dpiScale);
+                    }
+                    else if (headFade > 0.01f)
+                    {
+                        // 拖尾开启时，流光的光晕跟随拖尾头部，并随拖尾一起淡出。
+                        DrawTrailGlow(g, cfg, glowColor, headX, headY, dpiScale, headFade);
+                    }
+                }
+                else
+                {
+                    DrawCursorGlow(g, cfg, glowColor, headX, headY, dpiScale);
+                }
             }
 
             if (cfg.Style == "sparks")
             {
                 DrawSparks(g, engine, originX, originY);
+                DrawHaloRing(g, cfg, haloColor, headX, headY, ghostX, ghostY, drawGhost, dpiScale);
                 return;
             }
 
             if (samples.Count == 0)
             {
+                DrawHaloRing(g, cfg, haloColor, headX, headY, ghostX, ghostY, drawGhost, dpiScale);
                 return;
             }
 
             bool rainbow = cfg.Style == "rainbow";
             bool minimal = cfg.Style == "minimal";
             float maxR = (minimal ? 1.35f * (float)cfg.MinimalWidth : MaxRadius) * cfg.Scale * dpiScale;
-            float minSpacing = (minimal ? 1.0f : StampSpacing) * dpiScale;
+            float minSpacing = (minimal ? 1.6f : StampSpacing) * dpiScale;
 
             List<TrailPoint> group = new List<TrailPoint>(samples.Count);
             for (int i = 0; i < samples.Count; i++)
             {
                 if (samples[i].Break && group.Count > 0)
                 {
-                    DrawGroup(g, group, cfg, now, baseColor, maxR, minSpacing, rainbow, minimal);
+                    DrawGroup(g, group, cfg, now, baseColor, maxR, minSpacing, rainbow, minimal, glowColor, dpiScale);
                     group.Clear();
                 }
                 group.Add(new TrailPoint
@@ -77,19 +96,135 @@ namespace MouseTrail
             }
             if (group.Count > 0)
             {
-                DrawGroup(g, group, cfg, now, baseColor, maxR, minSpacing, rainbow, minimal);
+                DrawGroup(g, group, cfg, now, baseColor, maxR, minSpacing, rainbow, minimal, glowColor, dpiScale);
             }
+
+            DrawHaloRing(g, cfg, haloColor, headX, headY, ghostX, ghostY, drawGhost, dpiScale);
+        }
+
+        private static Color ResolveEffectColor(string name, Color autoColor)
+        {
+            if (string.IsNullOrEmpty(name) || string.Equals(name, "auto", StringComparison.Ordinal))
+            {
+                return autoColor;
+            }
+            return Palette.Get(name);
+        }
+
+        private static void DrawHaloRing(Graphics g, AppSettings cfg, Color color,
+            float x, float y, float ghostX, float ghostY, bool drawGhost, float dpiScale)
+        {
+            if (!cfg.HaloEnabled)
+            {
+                return;
+            }
+
+            float radius = (float)cfg.HaloRadius * dpiScale;
+            float width = Math.Max(1f, (float)cfg.HaloThickness * dpiScale);
+            int alpha = (int)(255 * (float)cfg.HaloOpacity);
+            if (radius <= 0f || alpha <= 0)
+            {
+                return;
+            }
+
+            SmoothingMode old = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            if (drawGhost)
+            {
+                int ghostAlpha = (int)(alpha * 0.18f);
+                if (ghostAlpha > 4)
+                {
+                    using (Pen ghostPen = new Pen(Color.FromArgb(ghostAlpha, color), width))
+                    {
+                        ghostPen.Alignment = PenAlignment.Center;
+                        g.DrawEllipse(ghostPen, ghostX - radius, ghostY - radius, radius * 2f, radius * 2f);
+                    }
+                }
+            }
+            using (Pen pen = new Pen(Color.FromArgb(alpha, color), width))
+            {
+                pen.Alignment = PenAlignment.Center;
+                g.DrawEllipse(pen, x - radius, y - radius, radius * 2f, radius * 2f);
+            }
+            g.SmoothingMode = old;
+        }
+
+        private static void DrawTrailGlow(Graphics g, AppSettings cfg, Color color,
+            float x, float y, float dpiScale, float fade)
+        {
+            if (!cfg.GlowEnabled || fade <= 0.01f)
+            {
+                return;
+            }
+
+            float radius = (float)cfg.GlowRadius * dpiScale;
+            int alpha = (int)(110f * (float)cfg.GlowStrength * fade);
+            if (radius < 1f || alpha < 1)
+            {
+                return;
+            }
+            if (alpha > 235)
+            {
+                alpha = 235;
+            }
+
+            SmoothingMode old = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (GraphicsPath path = new GraphicsPath())
+            {
+                path.AddEllipse(x - radius, y - radius, radius * 2f, radius * 2f);
+                using (PathGradientBrush brush = new PathGradientBrush(path))
+                {
+                    brush.CenterPoint = new PointF(x, y);
+                    brush.CenterColor = Color.FromArgb(alpha, color);
+                    brush.SurroundColors = new Color[] { Color.FromArgb(0, color) };
+                    g.FillPath(brush, path);
+                }
+            }
+            g.SmoothingMode = old;
+        }
+
+        private static void DrawCursorGlow(Graphics g, AppSettings cfg, Color color,
+            float x, float y, float dpiScale)
+        {
+            float radius = (float)cfg.GlowRadius * dpiScale;
+            int alpha = (int)(110f * (float)cfg.GlowStrength);
+            if (radius < 1f || alpha < 1)
+            {
+                return;
+            }
+            if (alpha > 235)
+            {
+                alpha = 235;
+            }
+
+            SmoothingMode old = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (GraphicsPath path = new GraphicsPath())
+            {
+                path.AddEllipse(x - radius, y - radius, radius * 2f, radius * 2f);
+                using (PathGradientBrush brush = new PathGradientBrush(path))
+                {
+                    brush.CenterPoint = new PointF(x, y);
+                    brush.CenterColor = Color.FromArgb(alpha, color);
+                    brush.SurroundColors = new Color[] { Color.FromArgb(0, color) };
+                    g.FillPath(brush, path);
+                }
+            }
+            g.SmoothingMode = old;
         }
 
         private static void DrawGroup(Graphics g, List<TrailPoint> group, AppSettings cfg, double now,
-            Color baseColor, float maxR, float minSpacing, bool rainbow, bool minimal)
+            Color baseColor, float maxR, float minSpacing, bool rainbow, bool minimal, Color glowColor,
+            float dpiScale)
         {
             if (group.Count == 0)
             {
                 return;
             }
 
-            float glow = (float)cfg.CometGlow;
+            float glow = cfg.Style == "comet" && cfg.GlowEnabled ? (float)cfg.GlowStrength : 0f;
+            float coreGlow = cfg.GlowEnabled ? (float)cfg.GlowStrength : 0f;
             float opacity = minimal ? (float)cfg.MinimalOpacity : 1f;
 
             if (group.Count == 1)
@@ -154,6 +289,58 @@ namespace MouseTrail
                 pen.EndCap = LineCap.Round;
                 pen.LineJoin = LineJoin.Round;
 
+                // 外侧光晕半透明且很宽，逐段绘制非常耗时；按年龄分成 6 段，
+                // 每段用一条路径一次画完，视觉上仍是连续的柔光。
+                if (!minimal && glow > 0.001f)
+                {
+                    GraphicsPath[] haloPaths = new GraphicsPath[6];
+                    for (int b = 0; b < haloPaths.Length; b++)
+                    {
+                        haloPaths[b] = new GraphicsPath();
+                    }
+                    for (int i = 1; i < dense.Count; i += 2)
+                    {
+                        TrailPoint a0 = dense[i - 1];
+                        TrailPoint a1 = dense[i];
+                        float f = Fade(now, a1.T, cfg.Life);
+                        if (f <= 0.015f)
+                        {
+                            continue;
+                        }
+                        float a = 228f * (float)Math.Pow(f, 1.15) * opacity;
+                        if (a < 1.2f)
+                        {
+                            continue;
+                        }
+                        int band = (int)(f * haloPaths.Length);
+                        if (band >= haloPaths.Length)
+                        {
+                            band = haloPaths.Length - 1;
+                        }
+                        haloPaths[band].AddLine(a0.X, a0.Y, a1.X, a1.Y);
+                    }
+                    for (int b = 0; b < haloPaths.Length; b++)
+                    {
+                        if (haloPaths[b].PointCount < 2)
+                        {
+                            continue;
+                        }
+                        float f = (b + 0.5f) / haloPaths.Length;
+                        int haloAlpha = (int)(228f * (float)Math.Pow(f, 1.15) * opacity * 0.065f * glow);
+                        if (haloAlpha <= 0)
+                        {
+                            continue;
+                        }
+                        pen.Width = 4.8f * MaxRadius * dpiScale;
+                        pen.Color = Color.FromArgb(haloAlpha, glowColor);
+                        g.DrawPath(pen, haloPaths[b]);
+                    }
+                    for (int b = 0; b < haloPaths.Length; b++)
+                    {
+                        haloPaths[b].Dispose();
+                    }
+                }
+
                 for (int i = 1; i < dense.Count; i++)
                 {
                     TrailPoint a0 = dense[i - 1];
@@ -182,17 +369,6 @@ namespace MouseTrail
                         color = Palette.Blend(baseColor, Color.White, 0.15f * f * f);
                     }
 
-                    if (!minimal)
-                    {
-                        int haloAlpha = (int)(a * 0.065f * glow);
-                        if (haloAlpha > 0)
-                        {
-                            pen.Width = r * 4.8f * glow;
-                            pen.Color = Color.FromArgb(haloAlpha, color);
-                            g.DrawLine(pen, a0.X, a0.Y, a1.X, a1.Y);
-                        }
-                    }
-
                     pen.Width = r * 2f;
                     pen.Color = Color.FromArgb((int)a, color);
                     g.DrawLine(pen, a0.X, a0.Y, a1.X, a1.Y);
@@ -200,7 +376,7 @@ namespace MouseTrail
                     if (!minimal && f > 0.30f)
                     {
                         pen.Width = r * 0.6f;
-                        pen.Color = Color.FromArgb((int)(a * 0.32f * glow), 255, 255, 255);
+                        pen.Color = Color.FromArgb((int)(a * 0.32f * coreGlow), 255, 255, 255);
                         g.DrawLine(pen, a0.X, a0.Y, a1.X, a1.Y);
                     }
                 }
@@ -248,28 +424,6 @@ namespace MouseTrail
                     brush.Color = Color.FromArgb((int)(a * 0.95f), 255, 255, 255);
                     g.FillEllipse(brush, x - coreR, y - coreR, coreR * 2f, coreR * 2f);
                 }
-            }
-        }
-
-        private static void DrawHeadGlow(Graphics g, float x, float y, Color color, float scale, float fade)
-        {
-            float radius = 26f * scale;
-            using (GraphicsPath path = new GraphicsPath())
-            {
-                path.AddEllipse(x - radius, y - radius, radius * 2f, radius * 2f);
-                using (PathGradientBrush brush = new PathGradientBrush(path))
-                {
-                    brush.CenterPoint = new PointF(x, y);
-                    brush.CenterColor = Color.FromArgb((int)(125f * fade), color);
-                    brush.SurroundColors = new Color[] { Color.FromArgb(0, color) };
-                    g.FillPath(brush, path);
-                }
-            }
-
-            float core = 1.9f * scale;
-            using (SolidBrush b = new SolidBrush(Color.FromArgb((int)(130f * fade), 255, 255, 255)))
-            {
-                g.FillEllipse(b, x - core, y - core, core * 2f, core * 2f);
             }
         }
 

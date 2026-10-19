@@ -21,7 +21,15 @@ namespace MouseTrail
         public bool ShowTip = true;
         public string Language = "auto";
 
-        public double CometGlow = 1.0;
+        public double GlowStrength = 1.0;
+        public bool GlowEnabled = true;
+        public double GlowRadius = 42;
+        public string GlowColor = "auto";
+        public bool HaloEnabled = true;
+        public double HaloRadius = 26;
+        public double HaloThickness = 2.5;
+        public double HaloOpacity = 0.9;
+        public string HaloColor = "auto";
         public double RainbowSpeed = 0.85;
         public double RainbowSaturation = 0.92;
         public double RainbowOffset = 0.0;
@@ -51,7 +59,15 @@ namespace MouseTrail
             ColorName = DefaultColor;
             Scale = DefaultScale;
             Life = DefaultLife;
-            CometGlow = 1.0;
+            GlowStrength = 1.0;
+            GlowEnabled = true;
+            GlowRadius = 42;
+            GlowColor = "auto";
+            HaloEnabled = true;
+            HaloRadius = 26;
+            HaloThickness = 2.5;
+            HaloOpacity = 0.9;
+            HaloColor = "auto";
             RainbowSpeed = 0.85;
             RainbowSaturation = 0.92;
             RainbowOffset = 0.0;
@@ -141,9 +157,41 @@ namespace MouseTrail
                     {
                         settings.Language = val;
                     }
-                    else if (key == "cometglow")
+                    else if (key == "glowstrength")
                     {
-                        settings.CometGlow = ParseDouble(val, settings.CometGlow);
+                        settings.GlowStrength = ParseDouble(val, settings.GlowStrength);
+                    }
+                    else if (key == "glowenabled")
+                    {
+                        settings.GlowEnabled = ParseBool(val, settings.GlowEnabled);
+                    }
+                    else if (key == "glowradius")
+                    {
+                        settings.GlowRadius = ParseDouble(val, settings.GlowRadius);
+                    }
+                    else if (key == "glowcolor")
+                    {
+                        settings.GlowColor = ParseEffectColor(val, settings.GlowColor);
+                    }
+                    else if (key == "halocolor")
+                    {
+                        settings.HaloColor = ParseEffectColor(val, settings.HaloColor);
+                    }
+                    else if (key == "haloenabled")
+                    {
+                        settings.HaloEnabled = ParseBool(val, settings.HaloEnabled);
+                    }
+                    else if (key == "haloradius")
+                    {
+                        settings.HaloRadius = ParseDouble(val, settings.HaloRadius);
+                    }
+                    else if (key == "halothickness")
+                    {
+                        settings.HaloThickness = ParseDouble(val, settings.HaloThickness);
+                    }
+                    else if (key == "haloopacity")
+                    {
+                        settings.HaloOpacity = ParseDouble(val, settings.HaloOpacity);
                     }
                     else if (key == "rainbowspeed")
                     {
@@ -208,7 +256,11 @@ namespace MouseTrail
             {
                 settings.Scale = 2f;
             }
-            settings.CometGlow = ClampDouble(settings.CometGlow, 0.0, 1.5);
+            settings.GlowStrength = ClampDouble(settings.GlowStrength, 0.0, 2.0);
+            settings.GlowRadius = ClampDouble(settings.GlowRadius, 8.0, 120.0);
+            settings.HaloRadius = ClampDouble(settings.HaloRadius, 8.0, 80.0);
+            settings.HaloThickness = ClampDouble(settings.HaloThickness, 1.0, 10.0);
+            settings.HaloOpacity = ClampDouble(settings.HaloOpacity, 0.1, 1.0);
             settings.RainbowSpeed = ClampDouble(settings.RainbowSpeed, 0.1, 2.0);
             settings.RainbowSaturation = ClampDouble(settings.RainbowSaturation, 0.2, 1.0);
             settings.RainbowOffset = ClampDouble(settings.RainbowOffset, 0.0, 1.0);
@@ -226,6 +278,16 @@ namespace MouseTrail
             if (value < min) return min;
             if (value > max) return max;
             return value;
+        }
+
+        private static string ParseEffectColor(string value, string fallback)
+        {
+            if (string.Equals(value, "auto", StringComparison.OrdinalIgnoreCase))
+            {
+                return "auto";
+            }
+            string color = Palette.Normalize(value);
+            return color ?? fallback;
         }
 
         public void Save()
@@ -246,7 +308,15 @@ namespace MouseTrail
                 sb.AppendLine("# 语言 / Language: auto / zh / en");
                 sb.AppendLine("lang=" + Language);
                 sb.AppendLine("# 特效参数 / Style parameters");
-                sb.AppendLine("cometglow=" + CometGlow.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("glowenabled=" + (GlowEnabled ? "1" : "0"));
+                sb.AppendLine("glowstrength=" + GlowStrength.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("glowradius=" + GlowRadius.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("glowcolor=" + GlowColor);
+                sb.AppendLine("haloenabled=" + (HaloEnabled ? "1" : "0"));
+                sb.AppendLine("haloradius=" + HaloRadius.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("halothickness=" + HaloThickness.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("haloopacity=" + HaloOpacity.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("halocolor=" + HaloColor);
                 sb.AppendLine("rainbowspeed=" + RainbowSpeed.ToString("0.###", CultureInfo.InvariantCulture));
                 sb.AppendLine("rainbowsat=" + RainbowSaturation.ToString("0.###", CultureInfo.InvariantCulture));
                 sb.AppendLine("rainbowoffset=" + RainbowOffset.ToString("0.###", CultureInfo.InvariantCulture));

@@ -28,9 +28,11 @@ namespace MouseTrail
             public float Val;
         }
 
-        private const int MaxSamples = 800;
+        private const int DefaultSampleCapacity = 800;
+        private const int MinSampleLimit = 400;
+        private const int MaxSampleLimit = 4000;
 
-        private readonly List<Sample> _samples = new List<Sample>(MaxSamples);
+        private readonly List<Sample> _samples = new List<Sample>(DefaultSampleCapacity);
         private readonly List<Spark> _sparks = new List<Spark>(256);
         private readonly Random _rng = new Random();
 
@@ -52,6 +54,12 @@ namespace MouseTrail
         public List<Spark> Sparks
         {
             get { return _sparks; }
+        }
+
+        /// <summary>最近一次鼠标移动的时间，用于让光晕/光圈颜色跟随光标而不是随时间流动。</summary>
+        public double LastMoveTime
+        {
+            get { return _lastSample; }
         }
 
         public void Clear()
@@ -113,9 +121,18 @@ namespace MouseTrail
                 }
 
                 _samples.Add(new Sample { X = x, Y = y, T = now, Break = brk });
-                if (_samples.Count > MaxSamples)
+                int sampleLimit = (int)(Math.Max(0.2, cfg.Life) * 1000.0 / 15.0) + 100;
+                if (sampleLimit < MinSampleLimit)
                 {
-                    _samples.RemoveRange(0, _samples.Count - MaxSamples);
+                    sampleLimit = MinSampleLimit;
+                }
+                if (sampleLimit > MaxSampleLimit)
+                {
+                    sampleLimit = MaxSampleLimit;
+                }
+                if (_samples.Count > sampleLimit)
+                {
+                    _samples.RemoveRange(0, _samples.Count - sampleLimit);
                 }
 
                 _lastSample = now;

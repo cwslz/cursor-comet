@@ -14,6 +14,7 @@ namespace MouseTrail
         {
             Appearance,
             Color,
+            Halo,
             Behavior,
             Language,
             About,
@@ -21,7 +22,7 @@ namespace MouseTrail
         }
 
         private const string RepoUrl = "https://github.com/cwslz/cursor-comet";
-        private const string AppVersion = "1.7.0";
+        private const string AppVersion = "1.8.0";
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int WM_NCHITTEST = 0x84;
         private const int HTCAPTION = 2;
@@ -56,7 +57,7 @@ namespace MouseTrail
             Text = L10n.T("鼠标拖尾 · 设置", "Cursor Comet · Settings");
             BackColor = MaterialColors.Surface;
             ForeColor = MaterialColors.OnSurface;
-            Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 9.5f);
+            Font = FluentFonts.Create(10f, FontStyle.Regular);
             AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.None;
             try
@@ -76,6 +77,11 @@ namespace MouseTrail
             }
             ClientSize = new Size((int)(1080 * _dpiScale), (int)(700 * _dpiScale));
             MinimumSize = new Size((int)(760 * _dpiScale), (int)(520 * _dpiScale));
+            Rectangle work = Screen.PrimaryScreen.WorkingArea;
+            int fitWidth = Math.Min(ClientSize.Width, work.Width - (int)(32 * _dpiScale));
+            int fitHeight = Math.Min(ClientSize.Height, work.Height - (int)(32 * _dpiScale));
+            ClientSize = new Size(Math.Max(MinimumSize.Width, fitWidth),
+                Math.Max(MinimumSize.Height, fitHeight));
             StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = true;
             DoubleBuffered = true;
@@ -116,9 +122,9 @@ namespace MouseTrail
             WindowButton button = new WindowButton();
             button.Icon = icon;
             button.UiScale = _dpiScale;
-            button.Width = (int)(38 * _dpiScale);
+            button.Width = (int)(46 * _dpiScale);
             button.Height = (int)(32 * _dpiScale);
-            button.Margin = new Padding(0, 0, (int)(2 * _dpiScale), 0);
+            button.Margin = new Padding(0, 0, 0, 0);
             _toolTip.SetToolTip(button, tip);
             return button;
         }
@@ -175,6 +181,7 @@ namespace MouseTrail
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
+            FluentBackdrop.Apply(Handle);
             try
             {
                 int preference = 2;
@@ -256,7 +263,7 @@ namespace MouseTrail
             _sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             _sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _sidebar.BackColor = MaterialColors.SurfaceContainerHigh;
+            _sidebar.BackColor = MaterialColors.Surface;
             _sidebar.Padding = new Padding(
                 (int)(12 * _dpiScale), (int)(16 * _dpiScale),
                 (int)(12 * _dpiScale), (int)(12 * _dpiScale));
@@ -266,7 +273,7 @@ namespace MouseTrail
             BuildNavList();
             Panel spacer = new Panel();
             spacer.Dock = DockStyle.Fill;
-            spacer.BackColor = MaterialColors.SurfaceContainerHigh;
+            spacer.BackColor = MaterialColors.Surface;
             _sidebar.Controls.Add(spacer, 0, 2);
             BuildBottomNav();
 
@@ -290,21 +297,21 @@ namespace MouseTrail
             header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             header.Padding = new Padding(
-                (int)(32 * _dpiScale), (int)(26 * _dpiScale),
-                (int)(16 * _dpiScale), (int)(8 * _dpiScale));
+                (int)(32 * _dpiScale), (int)(20 * _dpiScale),
+                (int)(6 * _dpiScale), (int)(8 * _dpiScale));
             header.BackColor = MaterialColors.Surface;
 
             _sectionTitle = new Label();
             _sectionTitle.AutoSize = true;
-            _sectionTitle.Font = new Font(Font.FontFamily, 22f, FontStyle.Bold);
+            _sectionTitle.Font = new Font(Font.FontFamily, 26f, FontStyle.Bold);
             _sectionTitle.ForeColor = MaterialColors.OnSurface;
             _sectionTitle.BackColor = MaterialColors.Surface;
-            _sectionTitle.Margin = new Padding(0, 0, 0, 2);
+            _sectionTitle.Margin = new Padding(0, (int)(6 * _dpiScale), 0, 2);
             header.Controls.Add(_sectionTitle, 0, 0);
 
             _sectionSubtitle = new Label();
             _sectionSubtitle.AutoSize = true;
-            _sectionSubtitle.Font = new Font(Font.FontFamily, 9.5f);
+            _sectionSubtitle.Font = new Font(Font.FontFamily, 10f);
             _sectionSubtitle.ForeColor = MaterialColors.OnSurfaceVariant;
             _sectionSubtitle.BackColor = MaterialColors.Surface;
             _sectionSubtitle.Margin = new Padding(0, 0, 0, 0);
@@ -316,7 +323,7 @@ namespace MouseTrail
             windowControls.FlowDirection = FlowDirection.RightToLeft;
             windowControls.BackColor = MaterialColors.Surface;
             windowControls.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            windowControls.Margin = new Padding(0, (int)(2 * _dpiScale), 0, 0);
+            windowControls.Margin = new Padding(0, 0, 0, 0);
 
             WindowButton closeButton = MakeWindowButton(WindowButtonIcon.Close, L10n.T("关闭", "Close"));
             closeButton.Click += delegate { Close(); };
@@ -360,7 +367,7 @@ namespace MouseTrail
             header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             header.Margin = new Padding(0, 0, 0, (int)(14 * _dpiScale));
-            header.BackColor = MaterialColors.SurfaceContainerHigh;
+            header.BackColor = MaterialColors.Surface;
 
             try
             {
@@ -391,17 +398,17 @@ namespace MouseTrail
 
             _appTitle = new Label();
             _appTitle.AutoSize = true;
-            _appTitle.Font = new Font(Font.FontFamily, 12f, FontStyle.Bold);
+            _appTitle.Font = new Font(Font.FontFamily, 14f, FontStyle.Bold);
             _appTitle.ForeColor = MaterialColors.OnSurface;
-            _appTitle.BackColor = MaterialColors.SurfaceContainerHigh;
+            _appTitle.BackColor = MaterialColors.Surface;
             _appTitle.Margin = new Padding(0, 0, 0, 0);
             text.Controls.Add(_appTitle, 0, 0);
 
             _appSubtitle = new Label();
             _appSubtitle.AutoSize = true;
-            _appSubtitle.Font = new Font(Font.FontFamily, 8.5f);
+            _appSubtitle.Font = new Font(Font.FontFamily, 9f);
             _appSubtitle.ForeColor = MaterialColors.OnSurfaceVariant;
-            _appSubtitle.BackColor = MaterialColors.SurfaceContainerHigh;
+            _appSubtitle.BackColor = MaterialColors.Surface;
             _appSubtitle.Margin = new Padding(0, 0, 0, 0);
             text.Controls.Add(_appSubtitle, 0, 1);
 
@@ -422,12 +429,13 @@ namespace MouseTrail
             _navList.ColumnCount = 1;
             _navList.RowCount = 0;
             _navList.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            _navList.BackColor = MaterialColors.SurfaceContainerHigh;
+            _navList.BackColor = MaterialColors.Surface;
             _navList.Margin = new Padding(0, 0, 0, 0);
             _sidebar.Controls.Add(_navList, 0, 1);
 
             AddNav(Section.Appearance, NavIcon.Sparkle, _navList, _navItems);
             AddNav(Section.Color, NavIcon.Palette, _navList, _navItems);
+            AddNav(Section.Halo, NavIcon.Halo, _navList, _navItems);
             AddNav(Section.Behavior, NavIcon.Tune, _navList, _navItems);
             AddNav(Section.Language, NavIcon.Globe, _navList, _navItems);
         }
@@ -440,7 +448,7 @@ namespace MouseTrail
             _bottomNav.ColumnCount = 1;
             _bottomNav.RowCount = 0;
             _bottomNav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            _bottomNav.BackColor = MaterialColors.SurfaceContainerHigh;
+            _bottomNav.BackColor = MaterialColors.Surface;
             _bottomNav.Margin = new Padding(0, 10, 0, 0);
             _sidebar.Controls.Add(_bottomNav, 0, 3);
 
@@ -455,7 +463,7 @@ namespace MouseTrail
             item.Tag = section;
             item.Label = SectionTitle(section);
             item.UiScale = _dpiScale;
-            item.Height = (int)(44 * _dpiScale);
+            item.Height = (int)(40 * _dpiScale);
             item.Margin = new Padding(0, (int)(2 * _dpiScale), 0, (int)(2 * _dpiScale));
             item.Click += delegate { SelectSection(section); };
             host.RowCount++;
@@ -513,6 +521,9 @@ namespace MouseTrail
                 case Section.Color:
                     BuildColorCards();
                     break;
+                case Section.Halo:
+                    BuildHaloCards();
+                    break;
                 case Section.Behavior:
                     BuildBehaviorCards();
                     break;
@@ -554,14 +565,16 @@ namespace MouseTrail
             }
         }
 
-        private void AddCard(string title, string subtitle, Control content)
+        private void AddCard(string title, string subtitle, Control content, string note = null)
         {
             RoundedPanel card = new RoundedPanel();
-            card.Radius = (int)(18 * _dpiScale);
-            card.FillColor = MaterialColors.SurfaceContainer;
+            card.Radius = (int)(8 * _dpiScale);
+            card.FillColor = MaterialColors.Card;
+            card.BorderColor = MaterialColors.Stroke;
+            card.BorderWidth = 1f;
             card.Padding = new Padding(
-                (int)(14 * _dpiScale), (int)(12 * _dpiScale),
-                (int)(14 * _dpiScale), (int)(14 * _dpiScale));
+                (int)(18 * _dpiScale), (int)(14 * _dpiScale),
+                (int)(18 * _dpiScale), (int)(16 * _dpiScale));
             card.AutoSize = true;
             card.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             card.MinimumSize = new Size((int)(240 * _dpiScale), 0);
@@ -571,9 +584,10 @@ namespace MouseTrail
             layout.AutoSize = true;
             layout.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             layout.Dock = DockStyle.Top;
-            layout.ColumnCount = 1;
+            layout.ColumnCount = 2;
             layout.RowCount = 3;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -582,18 +596,26 @@ namespace MouseTrail
             Label titleLabel = new Label();
             titleLabel.Text = title;
             titleLabel.AutoSize = true;
-            titleLabel.Font = new Font(Font.FontFamily, 11f, FontStyle.Bold);
+            titleLabel.Font = new Font(Font.FontFamily, 13f, FontStyle.Bold);
             titleLabel.ForeColor = MaterialColors.OnSurface;
-            titleLabel.BackColor = MaterialColors.SurfaceContainer;
+            titleLabel.BackColor = MaterialColors.Card;
             titleLabel.Margin = new Padding(0, 0, 0, 2);
             layout.Controls.Add(titleLabel, 0, 0);
+
+            if (!string.IsNullOrEmpty(note))
+            {
+                InfoDot dot = MakeInfoDot(note);
+                dot.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+                dot.Margin = new Padding(0, 0, 0, 0);
+                layout.Controls.Add(dot, 1, 0);
+            }
 
             Label subtitleLabel = new Label();
             subtitleLabel.Text = subtitle;
             subtitleLabel.AutoSize = true;
-            subtitleLabel.Font = new Font(Font.FontFamily, 8f);
+            subtitleLabel.Font = new Font(Font.FontFamily, 9f);
             subtitleLabel.ForeColor = MaterialColors.OnSurfaceVariant;
-            subtitleLabel.BackColor = MaterialColors.SurfaceContainer;
+            subtitleLabel.BackColor = MaterialColors.Card;
             subtitleLabel.Margin = new Padding(0, 0, 0, 0);
             layout.Controls.Add(subtitleLabel, 0, 1);
 
@@ -604,10 +626,23 @@ namespace MouseTrail
                 content.BackColor = MaterialColors.SurfaceContainer;
             }
             layout.Controls.Add(content, 0, 2);
+            layout.SetColumnSpan(content, 2);
 
             card.Controls.Add(layout);
 
             _cards.Controls.Add(card);
+        }
+
+        private InfoDot MakeInfoDot(string note)
+        {
+            InfoDot dot = new InfoDot();
+            dot.UiScale = _dpiScale;
+            dot.Width = (int)(18 * _dpiScale);
+            dot.Height = (int)(18 * _dpiScale);
+            dot.BackColor = MaterialColors.Card;
+            dot.Click += delegate { _toolTip.Show(note, dot, 10000); };
+            _toolTip.SetToolTip(dot, note);
+            return dot;
         }
 
         private void BuildAppearanceCards()
@@ -616,7 +651,7 @@ namespace MouseTrail
             enable.Text = L10n.T("启用鼠标拖尾", "Enable mouse trail");
             enable.Checked = _cfg.Enabled;
             enable.Width = 320;
-            enable.Height = (int)(34 * _dpiScale);
+            enable.Height = (int)(32 * _dpiScale);
             enable.UiScale = _dpiScale;
             enable.CheckedChanged += delegate
             {
@@ -632,8 +667,8 @@ namespace MouseTrail
                 "When off, the overlay stops drawing the trail."), enable);
 
             FlowLayoutPanel styles = new FlowLayoutPanel();
-            styles.AutoSize = false;
-            styles.Height = (int)((72 + 10) * _dpiScale);
+            styles.AutoSize = true;
+            styles.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             styles.Dock = DockStyle.Top;
             styles.WrapContents = true;
             styles.BackColor = MaterialColors.SurfaceContainer;
@@ -671,7 +706,9 @@ namespace MouseTrail
 
             AddCard(L10n.T("粗细与时长", "Thickness and duration"),
                 L10n.T("调整拖尾的线宽和停留时间。",
-                    "Adjust the trail width and how long it lasts."), content);
+                    "Adjust the trail width and how long it lasts."), content,
+                L10n.T("过高的参数可能引起严重卡顿，请自行斟酌。",
+                    "Very high settings can cause severe lag; adjust with care."));
         }
 
         private void BuildStyleParametersCard()
@@ -687,9 +724,23 @@ namespace MouseTrail
             switch (_cfg.Style)
             {
                 case "comet":
-                    AddParamRow(content, L10n.T("光晕", "Glow"), 0.0, 1.5, 0.05, _cfg.CometGlow,
-                        delegate(double v) { return v.ToString("0.00") + "×"; },
-                        delegate(double v) { _cfg.CometGlow = v; });
+                    Label moved = new Label();
+                    moved.AutoSize = true;
+                    moved.MaximumSize = new Size((int)(720 * _dpiScale), 0);
+                    moved.Text = L10n.T("光晕已移至「光圈」选项；流光的光晕会跟随拖尾，拖尾淡出时一起消失。",
+                        "The glow has moved to the Halo page; the comet glow follows the trail and fades with it.");
+                    moved.Font = new Font(Font.FontFamily, 9f);
+                    moved.ForeColor = MaterialColors.OnSurfaceVariant;
+                    moved.BackColor = MaterialColors.SurfaceContainer;
+                    moved.Margin = new Padding(0, 0, 0, (int)(6 * _dpiScale));
+                    AddContentRow(content, moved);
+
+                    MaterialButton openHalo = new MaterialButton();
+                    openHalo.Text = L10n.T("前往光圈", "Open Halo");
+                    openHalo.FillColor = MaterialColors.PrimaryContainer;
+                    openHalo.TextColor = MaterialColors.OnPrimaryContainer;
+                    openHalo.Click += delegate { SelectSection(Section.Halo); };
+                    AddContentRow(content, openHalo);
                     break;
                 case "rainbow":
                     AddRainbowRows(content);
@@ -718,8 +769,17 @@ namespace MouseTrail
                     break;
             }
 
+            if (content.Controls.Count == 0)
+            {
+                return;
+            }
+
+            string styleNote = _cfg.Style == "comet"
+                ? L10n.T("请注意，流光外侧的尾焰光晕受光晕开关控制，宽度固定；这是已知问题，后续版本会修复并独立。",
+                    "Note: the comet's outer trail glow is still controlled by the Halo glow switch and has a fixed width; this is a known issue and will be separated in a later version.")
+                : null;
             AddCard(L10n.T("样式参数", "Style parameters"),
-                L10n.T("调整当前样式的特效。", "Tune the effects of the current style."), content);
+                L10n.T("调整当前样式的特效。", "Tune the effects of the current style."), content, styleNote);
         }
 
         private void AddRainbowRows(TableLayoutPanel host)
@@ -753,9 +813,9 @@ namespace MouseTrail
             Label name = new Label();
             name.AutoSize = true;
             name.Text = label;
-            name.Font = new Font(Font.FontFamily, 9f);
+            name.Font = new Font(Font.FontFamily, 10f);
             name.ForeColor = MaterialColors.OnSurfaceVariant;
-            name.BackColor = MaterialColors.SurfaceContainer;
+            name.BackColor = MaterialColors.Card;
             name.Anchor = AnchorStyles.Left;
             name.Margin = new Padding(0, (int)(10 * _dpiScale), (int)(12 * _dpiScale), 0);
             row.Controls.Add(name, 0, 0);
@@ -766,7 +826,7 @@ namespace MouseTrail
             slider.Step = step;
             slider.Value = value;
             slider.UiScale = _dpiScale;
-            slider.Height = (int)(30 * _dpiScale);
+            slider.Height = (int)(32 * _dpiScale);
             slider.Dock = DockStyle.Top;
             slider.Margin = new Padding(0, (int)(4 * _dpiScale), (int)(10 * _dpiScale), 0);
             row.Controls.Add(slider, 1, 0);
@@ -774,9 +834,9 @@ namespace MouseTrail
             Label val = new Label();
             val.AutoSize = true;
             val.Text = format(value);
-            val.Font = new Font(Font.FontFamily, 10.5f, FontStyle.Bold);
+            val.Font = new Font(Font.FontFamily, 11f, FontStyle.Bold);
             val.ForeColor = MaterialColors.Primary;
-            val.BackColor = MaterialColors.SurfaceContainer;
+            val.BackColor = MaterialColors.Card;
             val.Anchor = AnchorStyles.Right;
             val.TextAlign = ContentAlignment.MiddleRight;
             val.Margin = new Padding(0, (int)(7 * _dpiScale), 0, 0);
@@ -807,7 +867,7 @@ namespace MouseTrail
             card.Selected = string.Equals(_cfg.Style, key, StringComparison.Ordinal);
             card.UiScale = _dpiScale;
             card.Width = (int)(160 * _dpiScale);
-            card.Height = (int)(72 * _dpiScale);
+            card.Height = (int)(92 * _dpiScale);
             card.Click += delegate
             {
                 if (_loading)
@@ -819,6 +879,17 @@ namespace MouseTrail
                 _changed(false);
                 BeginInvoke(new MethodInvoker(RebuildCards));
             };
+            if (key == "rainbow")
+            {
+                InfoDot dot = MakeInfoDot(L10n.T("本软件的彩虹是随着鼠标的运动而改变的，并非自行跳动。",
+                    "The rainbow follows mouse movement; it does not animate by itself."));
+                dot.BackColor = card.Selected ? MaterialColors.SelectedTint : MaterialColors.Card;
+                dot.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+                dot.Location = new Point(card.Width - dot.Width - (int)(8 * _dpiScale),
+                    (int)(8 * _dpiScale));
+                dot.Margin = new Padding(0);
+                card.Controls.Add(dot);
+            }
             host.Controls.Add(card);
         }
 
@@ -839,7 +910,7 @@ namespace MouseTrail
             note.MaximumSize = new Size((int)(760 * _dpiScale), 0);
             note.ForeColor = MaterialColors.OnSurfaceVariant;
             note.BackColor = MaterialColors.SurfaceContainer;
-            note.Font = new Font(Font.FontFamily, 8.5f);
+            note.Font = new Font(Font.FontFamily, 9f);
             note.Margin = new Padding(0, 0, 0, (int)(10 * _dpiScale));
             content.RowCount++;
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -903,7 +974,7 @@ namespace MouseTrail
             current.Text = L10n.T("当前颜色：", "Current color: ") + Palette.Display(_cfg.ColorName);
             current.ForeColor = MaterialColors.OnSurfaceVariant;
             current.BackColor = MaterialColors.SurfaceContainer;
-            current.Font = new Font(Font.FontFamily, 8.5f);
+            current.Font = new Font(Font.FontFamily, 9f);
             current.Margin = new Padding(0, 8, 0, 0);
 
             TableLayoutPanel content = new TableLayoutPanel();
@@ -920,6 +991,184 @@ namespace MouseTrail
 
             AddCard(L10n.T("颜色", "Color"), L10n.T("选择拖尾的主色。",
                 "Pick the main color of the trail."), content);
+        }
+
+        private void BuildHaloCards()
+        {
+            TableLayoutPanel glowContent = new TableLayoutPanel();
+            glowContent.AutoSize = true;
+            glowContent.Dock = DockStyle.Top;
+            glowContent.ColumnCount = 1;
+            glowContent.RowCount = 0;
+            glowContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            glowContent.BackColor = MaterialColors.SurfaceContainer;
+
+            MaterialToggle glowToggle = new MaterialToggle();
+            glowToggle.Text = L10n.T("显示光晕", "Show glow");
+            glowToggle.Checked = _cfg.GlowEnabled;
+            glowToggle.Width = (int)(360 * _dpiScale);
+            glowToggle.Height = (int)(34 * _dpiScale);
+            glowToggle.UiScale = _dpiScale;
+            glowToggle.Margin = new Padding(0, 0, 0, (int)(4 * _dpiScale));
+            glowToggle.CheckedChanged += delegate
+            {
+                if (_loading)
+                {
+                    return;
+                }
+                _cfg.GlowEnabled = glowToggle.Checked;
+                _cfg.Save();
+                _changed(false);
+            };
+            AddContentRow(glowContent, glowToggle);
+
+            AddParamRow(glowContent, L10n.T("半径", "Radius"), 8, 120, 1, _cfg.GlowRadius,
+                delegate(double v) { return v.ToString("0") + " px"; },
+                delegate(double v) { _cfg.GlowRadius = v; });
+            AddParamRow(glowContent, L10n.T("强度", "Strength"), 0.0, 2.0, 0.05, _cfg.GlowStrength,
+                delegate(double v) { return v.ToString("0.00") + "×"; },
+                delegate(double v) { _cfg.GlowStrength = v; });
+            AddHaloColorRow(glowContent, _cfg.GlowColor,
+                delegate(string key) { _cfg.GlowColor = key; });
+
+            AddCard(L10n.T("光晕", "Glow"),
+                L10n.T("流光：光晕跟随拖尾并在淡出时消失；其他样式：光晕跟随光标。",
+                    "Comet: the glow follows the trail and fades with it; other styles: the glow follows the cursor."), glowContent);
+
+            TableLayoutPanel haloContent = new TableLayoutPanel();
+            haloContent.AutoSize = true;
+            haloContent.Dock = DockStyle.Top;
+            haloContent.ColumnCount = 1;
+            haloContent.RowCount = 0;
+            haloContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            haloContent.BackColor = MaterialColors.SurfaceContainer;
+
+            MaterialToggle haloToggle = new MaterialToggle();
+            haloToggle.Text = L10n.T("显示光圈", "Show halo");
+            haloToggle.Checked = _cfg.HaloEnabled;
+            haloToggle.Width = (int)(360 * _dpiScale);
+            haloToggle.Height = (int)(34 * _dpiScale);
+            haloToggle.UiScale = _dpiScale;
+            haloToggle.Margin = new Padding(0, 0, 0, (int)(4 * _dpiScale));
+            haloToggle.CheckedChanged += delegate
+            {
+                if (_loading)
+                {
+                    return;
+                }
+                _cfg.HaloEnabled = haloToggle.Checked;
+                _cfg.Save();
+                _changed(false);
+            };
+            AddContentRow(haloContent, haloToggle);
+
+            AddParamRow(haloContent, L10n.T("半径", "Radius"), 8, 80, 1, _cfg.HaloRadius,
+                delegate(double v) { return v.ToString("0") + " px"; },
+                delegate(double v) { _cfg.HaloRadius = v; });
+            AddParamRow(haloContent, L10n.T("粗细", "Thickness"), 1, 10, 0.5, _cfg.HaloThickness,
+                delegate(double v) { return v.ToString("0.0") + " px"; },
+                delegate(double v) { _cfg.HaloThickness = v; });
+            AddParamRow(haloContent, L10n.T("不透明度", "Opacity"), 0.1, 1, 0.05, _cfg.HaloOpacity,
+                delegate(double v) { return Math.Round(v * 100) + "%"; },
+                delegate(double v) { _cfg.HaloOpacity = v; });
+            AddHaloColorRow(haloContent, _cfg.HaloColor,
+                delegate(string key) { _cfg.HaloColor = key; });
+
+            AddCard(L10n.T("光圈", "Halo"),
+                L10n.T("围绕鼠标的独立圆环，不受拖尾样式影响。",
+                    "An independent ring around the cursor, unaffected by the trail style."), haloContent,
+                L10n.T("光圈可能带来性能问题。", "The halo ring may cause performance issues."));
+        }
+
+        private void AddHaloColorRow(TableLayoutPanel host, string current, Action<string> apply)
+        {
+            TableLayoutPanel row = new TableLayoutPanel();
+            row.AutoSize = true;
+            row.Dock = DockStyle.Top;
+            row.ColumnCount = 2;
+            row.RowCount = 1;
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            row.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            row.BackColor = MaterialColors.SurfaceContainer;
+            row.Margin = new Padding(0, (int)(2 * _dpiScale), 0, (int)(2 * _dpiScale));
+
+            Label name = new Label();
+            name.AutoSize = true;
+            name.Text = L10n.T("颜色", "Color");
+            name.Font = new Font(Font.FontFamily, 10f);
+            name.ForeColor = MaterialColors.OnSurfaceVariant;
+            name.BackColor = MaterialColors.Card;
+            name.Anchor = AnchorStyles.Left;
+            name.Margin = new Padding(0, (int)(10 * _dpiScale), (int)(12 * _dpiScale), 0);
+            row.Controls.Add(name, 0, 0);
+
+            FlowLayoutPanel flow = new FlowLayoutPanel();
+            flow.AutoSize = true;
+            flow.WrapContents = false;
+            flow.BackColor = MaterialColors.SurfaceContainer;
+            flow.Margin = new Padding(0, (int)(4 * _dpiScale), 0, 0);
+
+            bool auto = string.Equals(current, "auto", StringComparison.Ordinal);
+            MaterialButton autoButton = new MaterialButton();
+            autoButton.Text = L10n.T("跟随", "Auto");
+            autoButton.Font = new Font(Font.FontFamily, 9f);
+            autoButton.FillColor = auto ? MaterialColors.PrimaryContainer : MaterialColors.SurfaceContainerHigh;
+            autoButton.TextColor = auto ? MaterialColors.OnPrimaryContainer : MaterialColors.OnSurfaceVariant;
+            autoButton.BorderColor = MaterialColors.OutlineVariant;
+            autoButton.Height = (int)(30 * _dpiScale);
+            autoButton.Margin = new Padding(0, 0, (int)(8 * _dpiScale), (int)(6 * _dpiScale));
+            autoButton.Click += delegate
+            {
+                if (_loading)
+                {
+                    return;
+                }
+                apply("auto");
+                _cfg.Save();
+                _changed(false);
+                BeginInvoke(new MethodInvoker(RebuildCards));
+            };
+            flow.Controls.Add(autoButton);
+
+            for (int i = 0; i < Palette.Definitions.Length; i++)
+            {
+                ColorDef def = Palette.Definitions[i];
+                ColorSwatch swatch = new ColorSwatch();
+                swatch.SwatchColor = def.Value;
+                swatch.Selected = string.Equals(current, def.Key, StringComparison.Ordinal);
+                swatch.ColorName = def.Key;
+                swatch.UiScale = _dpiScale;
+                swatch.Width = (int)(34 * _dpiScale);
+                swatch.Height = (int)(34 * _dpiScale);
+                swatch.Margin = new Padding(0, 0, (int)(8 * _dpiScale), (int)(6 * _dpiScale));
+                _toolTip.SetToolTip(swatch, L10n.T(def.Zh, def.En));
+                string key = def.Key;
+                swatch.Click += delegate
+                {
+                    if (_loading)
+                    {
+                        return;
+                    }
+                    apply(key);
+                    _cfg.Save();
+                    _changed(false);
+                    BeginInvoke(new MethodInvoker(RebuildCards));
+                };
+                flow.Controls.Add(swatch);
+            }
+
+            row.Controls.Add(flow, 1, 0);
+            host.RowCount++;
+            host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            host.Controls.Add(row, 0, host.RowCount - 1);
+        }
+
+        private void AddContentRow(TableLayoutPanel host, Control control)
+        {
+            host.RowCount++;
+            host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            host.Controls.Add(control, 0, host.RowCount - 1);
         }
 
         private void BuildBehaviorCards()
@@ -980,8 +1229,22 @@ namespace MouseTrail
             reset.Text = L10n.T("恢复默认设置", "Reset to defaults");
             reset.FillColor = MaterialColors.SecondaryContainer;
             reset.TextColor = MaterialColors.OnSecondaryContainer;
+            reset.BorderColor = MaterialColors.Stroke;
             reset.Click += delegate
             {
+                using (ConfirmDialog dialog = new ConfirmDialog(
+                    L10n.T("恢复默认设置", "Reset to defaults"),
+                    L10n.T("这会重置所有外观、颜色、光圈和行为设置，且无法撤销。",
+                        "This resets all appearance, color, halo and behavior settings. This cannot be undone."),
+                    L10n.T("确认恢复", "Reset"),
+                    L10n.T("取消", "Cancel"),
+                    _dpiScale))
+                {
+                    if (dialog.ShowDialog(this) != DialogResult.OK)
+                    {
+                        return;
+                    }
+                }
                 _cfg.Reset();
                 _cfg.Enabled = true;
                 _cfg.Save();
@@ -994,7 +1257,7 @@ namespace MouseTrail
             folder.Text = L10n.T("打开配置文件夹", "Open config folder");
             folder.FillColor = MaterialColors.SurfaceContainerHigh;
             folder.TextColor = MaterialColors.OnSurface;
-            folder.BorderColor = MaterialColors.OutlineVariant;
+            folder.BorderColor = MaterialColors.Stroke;
             folder.Margin = new Padding(8, 0, 0, 0);
             folder.Click += delegate
             {
@@ -1031,7 +1294,7 @@ namespace MouseTrail
             note.Text = L10n.T("“自动”会跟随系统语言。", "“Auto” follows the system language.");
             note.ForeColor = MaterialColors.OnSurfaceVariant;
             note.BackColor = MaterialColors.SurfaceContainer;
-            note.Font = new Font(Font.FontFamily, 8.5f);
+            note.Font = new Font(Font.FontFamily, 9f);
             note.Margin = new Padding(0, 10, 0, 0);
 
             TableLayoutPanel content = new TableLayoutPanel();
@@ -1057,8 +1320,8 @@ namespace MouseTrail
             button.Text = text;
             button.FillColor = selected ? MaterialColors.PrimaryContainer : MaterialColors.SurfaceContainerHigh;
             button.TextColor = selected ? MaterialColors.OnPrimaryContainer : MaterialColors.OnSurface;
-            button.BorderColor = selected ? MaterialColors.Primary : Color.Transparent;
-            button.Radius = 18;
+            button.BorderColor = selected ? MaterialColors.Accent : MaterialColors.Stroke;
+            button.Radius = 4;
             button.Margin = new Padding(0, 0, 8, 8);
             button.Click += delegate
             {
@@ -1110,18 +1373,18 @@ namespace MouseTrail
             Label name = new Label();
             name.AutoSize = true;
             name.Text = "Cursor Comet";
-            name.Font = new Font(Font.FontFamily, 18f, FontStyle.Bold);
+            name.Font = new Font(Font.FontFamily, 20f, FontStyle.Bold);
             name.ForeColor = MaterialColors.OnSurface;
-            name.BackColor = MaterialColors.SurfaceContainer;
+            name.BackColor = MaterialColors.Card;
             name.Margin = new Padding(0, 0, 0, 2);
             content.Controls.Add(name, 1, 0);
 
             Label version = new Label();
             version.AutoSize = true;
             version.Text = "v" + AppVersion + " · GPL-3.0";
-            version.Font = new Font(Font.FontFamily, 9f);
+            version.Font = new Font(Font.FontFamily, 9.5f);
             version.ForeColor = MaterialColors.OnSurfaceVariant;
-            version.BackColor = MaterialColors.SurfaceContainer;
+            version.BackColor = MaterialColors.Card;
             content.Controls.Add(version, 1, 1);
 
             Label description = new Label();
@@ -1130,7 +1393,7 @@ namespace MouseTrail
             description.Text = L10n.T("Windows 鼠标拖尾特效：全屏透明覆盖、四种样式、按时间淡出，支持高 DPI。",
                 "Windows cursor trail effect: full-screen transparent overlay, four styles, time-based fading and high-DPI support.");
             description.ForeColor = MaterialColors.OnSurfaceVariant;
-            description.BackColor = MaterialColors.SurfaceContainer;
+            description.BackColor = MaterialColors.Card;
             description.Margin = new Padding(0, 8, 0, 4);
             content.Controls.Add(description, 1, 2);
 
@@ -1139,9 +1402,26 @@ namespace MouseTrail
             config.MaximumSize = new Size(620, 0);
             config.Text = L10n.T("配置文件：", "Config file: ") + AppSettings.FilePath;
             config.ForeColor = MaterialColors.OnSurfaceVariant;
-            config.Font = new Font(Font.FontFamily, 8.5f);
+            config.Font = new Font(Font.FontFamily, 9f);
             config.BackColor = MaterialColors.SurfaceContainer;
             content.Controls.Add(config, 1, 3);
+
+            Label star = new Label();
+            star.AutoSize = true;
+            star.MaximumSize = new Size((int)(760 * _dpiScale), 0);
+            star.Text = L10n.T("如果觉得好用，可以给个 Star 吗 ⭐️✨",
+                "If you find it useful, could you give it a Star? ⭐️✨");
+            star.Font = new Font(Font.FontFamily, 10f);
+            star.ForeColor = MaterialColors.Primary;
+            star.BackColor = MaterialColors.SurfaceContainer;
+            star.Cursor = Cursors.Hand;
+            star.Margin = new Padding(0, (int)(14 * _dpiScale), 0, 0);
+            star.Click += delegate { OpenRepo(); };
+            _toolTip.SetToolTip(star, L10n.T("打开 GitHub 仓库", "Open the GitHub repository"));
+            content.RowCount++;
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.Controls.Add(star, 0, content.RowCount - 1);
+            content.SetColumnSpan(star, 2);
 
             AddCard(L10n.T("关于 Cursor Comet", "About Cursor Comet"),
                 L10n.T("版本、许可证和配置位置。", "Version, license and config location."), content);
@@ -1163,9 +1443,9 @@ namespace MouseTrail
             Label repo = new Label();
             repo.AutoSize = true;
             repo.Text = "github.com/cwslz/cursor-comet";
-            repo.Font = new Font(Font.FontFamily, 12f, FontStyle.Bold);
+            repo.Font = new Font(Font.FontFamily, 14f, FontStyle.Bold);
             repo.ForeColor = MaterialColors.OnSurface;
-            repo.BackColor = MaterialColors.SurfaceContainer;
+            repo.BackColor = MaterialColors.Card;
             content.Controls.Add(repo, 0, 0);
 
             Label description = new Label();
@@ -1174,7 +1454,7 @@ namespace MouseTrail
             description.Text = L10n.T("源码、问题反馈和版本发布都在 GitHub 上。",
                 "Source code, issues and releases are on GitHub.");
             description.ForeColor = MaterialColors.OnSurfaceVariant;
-            description.BackColor = MaterialColors.SurfaceContainer;
+            description.BackColor = MaterialColors.Card;
             description.Margin = new Padding(0, 6, 0, 10);
             content.Controls.Add(description, 0, 1);
 
@@ -1218,6 +1498,17 @@ namespace MouseTrail
             _sectionSubtitle.Text = SectionSubtitle(_section);
             RebuildCards();
             UpdateResponsive();
+        }
+
+        private void OpenRepo()
+        {
+            try
+            {
+                Process.Start(RepoUrl);
+            }
+            catch
+            {
+            }
         }
 
         private void UpdateResponsive()
@@ -1264,6 +1555,8 @@ namespace MouseTrail
                     return L10n.T("外观", "Appearance");
                 case Section.Color:
                     return L10n.T("颜色", "Color");
+                case Section.Halo:
+                    return L10n.T("光圈", "Halo");
                 case Section.Behavior:
                     return L10n.T("行为", "Behavior");
                 case Section.Language:
@@ -1291,6 +1584,9 @@ namespace MouseTrail
                     return L10n.T("开关、样式、粗细和时长。", "Toggle, style, thickness and duration.");
                 case Section.Color:
                     return L10n.T("选择拖尾的主色。", "Pick the main color of the trail.");
+                case Section.Halo:
+                    return L10n.T("围绕鼠标的光晕和光圈，独立于拖尾样式。",
+                        "Cursor glow and halo ring, independent of the trail style.");
                 case Section.Behavior:
                     return L10n.T("启动、提示和重置。", "Startup, tips and reset.");
                 case Section.Language:
