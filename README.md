@@ -17,7 +17,7 @@
 从 [Releases](https://github.com/cwslz/cursor-comet/releases/latest) 下载 `CursorComet-Setup.exe`，双击安装。
 
 - 默认安装到 `%LOCALAPPDATA%\Programs\CursorComet`，不需要管理员权限；
-- 安装界面参考 Everything 的经典向导：欢迎/语言 → 许可协议 → 安装位置（含所需/可用空间）→ 安装进度 → 完成；
+- 安装界面参考 Everything 的经典向导：语言选择 → 许可协议 → 安装位置（含所需/可用空间）→ 安装进度 → 完成；窗口固定 576×302；
 - 完成页可勾选“启动 Cursor Comet”，点“完成”退出；
 - 自动创建开始菜单快捷方式，可选桌面快捷方式；
 - 同时安装独立的 `uninstall.exe`，在“设置 → 应用”里可以直接卸载；

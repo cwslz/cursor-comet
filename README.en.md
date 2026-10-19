@@ -17,7 +17,7 @@ A lightweight Windows cursor trail effect: a transparent overlay follows the mou
 Download `CursorComet-Setup.exe` from [Releases](https://github.com/cwslz/cursor-comet/releases/latest) and run it.
 
 - Installs to `%LOCALAPPDATA%\Programs\CursorComet`; no administrator rights needed;
-- Classic Everything-style wizard: welcome/language → license → install location (with space info) → progress → finish;
+- Classic Everything-style wizard: language → license → install location (with space info) → progress → finish; fixed 576×302 window;
 - The finish page can launch Cursor Comet; click “Finish” to close;
 - Creates a Start menu shortcut; optional desktop shortcut;
 - Installs a standalone `uninstall.exe`, also listed in Settings → Apps;
