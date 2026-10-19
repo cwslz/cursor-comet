@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Cursor Comet")]
 [assembly: AssemblyDescription("Cursor Comet installer")]
 [assembly: AssemblyCompany("cwslz")]
-[assembly: AssemblyVersion("1.4.1.0")]
-[assembly: AssemblyFileVersion("1.4.1.0")]
+[assembly: AssemblyVersion("1.4.2.0")]
+[assembly: AssemblyFileVersion("1.4.2.0")]
 
 namespace CursorCometSetup
 {
@@ -233,7 +233,7 @@ namespace CursorCometSetup
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            StartPosition = FormStartPosition.CenterScreen;
+            StartPosition = FormStartPosition.Manual;
             Font = new Font(L.IsChinese ? "Microsoft YaHei UI" : "Segoe UI", 8.5f);
 
             TableLayoutPanel root = new TableLayoutPanel();
@@ -292,6 +292,7 @@ namespace CursorCometSetup
 
             Load += delegate
             {
+                CenterOnScreen();
                 ApplyLanguage();
                 ShowPage(0);
             };
@@ -387,6 +388,14 @@ namespace CursorCometSetup
         private int Scaled(int value)
         {
             return (int)Math.Round(value * _uiScale);
+        }
+
+        private void CenterOnScreen()
+        {
+            Rectangle area = Screen.FromPoint(Cursor.Position).WorkingArea;
+            int x = area.Left + (area.Width - Width) / 2;
+            int y = area.Top + (area.Height - Height) / 2;
+            Location = new Point(x, y);
         }
 
         private Label NewTitle()
