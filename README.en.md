@@ -4,7 +4,7 @@
 
 A lightweight Windows cursor trail effect: a transparent overlay follows the mouse and draws a glowing trail — **clicks, drags and typing pass straight through**.
 
-> **Preview**: 1.x is a development preview; features and config format may change. It is not recommended as your only daily-use version before 2.0. When reporting issues, include your Windows version, display scaling, and `%APPDATA%\CursorComet\error.log`.
+> **2.0.0 / Stable**: features and the config format are stable as of 2.0.0. When reporting issues, include your Windows version, display scaling, and `%APPDATA%\CursorComet\error.log`.
 
 [![build](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml/badge.svg)](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/cwslz/cursor-comet)](https://github.com/cwslz/cursor-comet/releases/latest)
@@ -34,7 +34,7 @@ The setup only installs. To remove the app, use Settings → Apps, or run `unins
 
 ### Portable
 
-Download `cursor-comet.exe` and run it. It does not write an install directory; settings still live in `%APPDATA%\CursorComet`.
+Download `cursor-comet.exe` and run it. It does not write an install directory; settings still live in `%APPDATA%\CursorComet` (the app restores from `config.ini.bak` if the main config is invalid or unreadable).
 
 Requires Windows 10 / 11 with .NET Framework 4.8 (built in). The exe is unsigned, so SmartScreen may warn — click “More info → Run anyway”. You can also clone the repo and run `build.ps1`.
 
@@ -62,7 +62,7 @@ Style, color, thickness, duration, language and auto-start live in the main wind
 - Portable build is a single exe (~120 KB); the installer is a ~2.1 MB Inno Setup 6 package that contains the app and generates the uninstaller
 - No Python, Node or .NET SDK required; uses the built-in .NET Framework 4.8
 - Per-pixel transparent + click-through (`WS_EX_LAYERED | WS_EX_TRANSPARENT`); normal clicking, dragging and typing are unaffected
-- Full-screen transparent overlay, trail fades by **fixed time**: fast movement makes it longer instead of clipping or breaking
+- Small transparent window that follows the trail, fading by **fixed time**: it moves and expands with the trail, so nothing gets clipped or broken at the edges
 - High-DPI aware on the primary display; mixed-DPI multi-monitor overlays use the primary display scale and may differ
 - Settings are saved and restored
 
@@ -204,11 +204,11 @@ cursor-comet/
 
 ## How it works
 
-1. A borderless, topmost, full-screen window with `WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE`.
-2. A 32-bpp premultiplied-alpha DIB created with `CreateDIBSection`; GDI+ draws into it and `UpdateLayeredWindow` presents it.
+1. A borderless, topmost, small follow window with `WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE`.
+2. A 32-bpp premultiplied-alpha DIB created with `CreateDIBSection`, covering only the current trail area; GDI+ draws into it and `UpdateLayeredWindowIndirect` with `prcDirty` presents it.
 3. Every sample carries a timestamp; brightness and radius come from its age. Faster movement keeps a longer trail; after the mouse stops the whole trail fades out within the configured duration.
 4. Smoothing uses Chaikin corner cutting, so the curve stays inside the control polygon and never overshoots into a loop.
-5. The path is resampled by arc length and drawn as round-capped line segments; width depends only on sample age, so speed never changes thickness.
+5. The path is resampled by arc length and drawn in 12 age-banded paths; width depends only on sample age, so speed never changes thickness.
 6. A radial gradient head glow is drawn under the trail; everything fades together, then the window is cleared to fully transparent while idle.
 
 ## FAQ
@@ -240,13 +240,13 @@ Edit the colors in `src\Palette.cs`, or the constants at the top of `src\TrailRe
 ## Versioning
 
 - `version.txt` is the single source of truth; `build.ps1` generates the app and installer versions from it.
-- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**, with **1.8.1-preview.1** as the latest preview; the local development version is **1.8.37** (standard Win11 title bar + standard controls + custom-drawn Fluent sidebar navigation + targeted refresh + scaled hand cursor + responsive style cards + follow-the-trail small-window rendering + banded path batching, not uploaded). All 1.x versions are development previews, and the next stable milestone is **2.0.0** (rendering architecture and engineering work).
+- Releases are for meaningful milestones only, not for every fix or visual tweak. The current version is **2.0.0**; 1.x releases (1.8.0, 1.8.1-preview.1, …) remain as development history. The next milestone is 2.x.
 - Old 1.x releases stay as development history; the version number is no longer a progress bar.
 
 ## Known limitations
 
 - The main window cards, title bar, style cards and color swatches are now standard WinForms controls; the sidebar navigation remains custom-drawn (icons, selection bar, responsive collapse). It is not Mica and has no dark mode; some native WinForms controls (scrollbars, combo boxes) are unstyled.
-- The overlay is now a small layered window that follows the trail and submits only the area it covers; fast movement, 4K and multi-monitor can still be CPU-heavy. This is the part 2.0.0 continues to optimize.
+- The overlay is a small layered window that follows the trail and submits only the area it covers; fast movement, 4K and multi-monitor can still be CPU-heavy. 2.0.x continues to optimize this.
 - The main window is manually scaled for the primary display DPI; mixed-DPI multi-monitor overlays may differ.
 - The installer is now an Inno Setup 6 wizard; its standard look differs from the custom-drawn main window.
 - There are 28 config/color/save/migration/backup-recovery tests and CI build checks; code signing and a standalone `.sln` are still missing.

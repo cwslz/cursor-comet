@@ -4,7 +4,7 @@
 
 一个轻量的 Windows 鼠标轨迹特效小工具：透明覆盖层跟随鼠标，画出带光晕的拖尾，**不挡点击、不抢焦点**。
 
-> **预览版 / Preview**：1.x 为开发预览，功能和配置格式可能变化；2.0 前不建议作为日常唯一版本。反馈请附 Windows 版本、缩放比例和 `%APPDATA%\CursorComet\error.log`。
+> **2.0.0 / 稳定版**：2.0.0 起功能和配置格式趋于稳定；反馈请附 Windows 版本、缩放比例和 `%APPDATA%\CursorComet\error.log`。
 
 [![build](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml/badge.svg)](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/cwslz/cursor-comet)](https://github.com/cwslz/cursor-comet/releases/latest)
@@ -62,13 +62,13 @@
 - 便携版是单文件 exe（约 120 KB）；安装版是约 2.1 MB 的 Inno Setup 6 安装器，内部已包含主程序，卸载器由 Inno 生成
 - 不需要安装 Python、Node 或 .NET SDK，使用 Windows 自带的 .NET Framework 4.8
 - 逐像素透明 + 鼠标穿透（`WS_EX_LAYERED | WS_EX_TRANSPARENT`），正常点击、拖拽、输入不受影响
-- 覆盖整个屏幕的透明窗口，轨迹按**固定时间**淡出：高速移动时拖尾自然变长，不会被窗口裁剪或断尾
+- 跟随轨迹的小型透明窗口，轨迹按**固定时间**淡出：窗口随轨迹自动移动、扩展，不会在边缘被裁剪或断尾
 - 支持主屏高 DPI；混合 DPI 多屏下覆盖层按主屏 DPI 缩放，可能不一致
 - 配置自动保存，下次启动沿用
 
 ## 配置文件
 
-位置：`%APPDATA%\CursorComet\config.ini`（首次启动会从旧的 `%APPDATA%\MouseTrail\config.ini` 自动迁移）
+位置：`%APPDATA%\CursorComet\config.ini`（首次启动会从旧的 `%APPDATA%\MouseTrail\config.ini` 自动迁移；配置内容无效或主文件不可读时，会自动尝试用 `config.ini.bak` 恢复）
 
 ```ini
 # 样式 / Style: comet / rainbow / sparks / minimal
@@ -214,17 +214,17 @@ cursor-comet/
 
 ## 实现说明
 
-1. 一个无边框、置顶、`WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE` 的全屏窗口；
-2. 用 `CreateDIBSection` 创建 32 位预乘 Alpha 位图，GDI+ 在上面绘制，再通过 `UpdateLayeredWindow` 一次性提交；
+1. 一个无边框、置顶、`WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE` 的小型跟随窗口；
+2. 用 `CreateDIBSection` 创建 32 位预乘 Alpha 位图，只覆盖当前轨迹脏区域；GDI+ 在上面绘制，再通过 `UpdateLayeredWindowIndirect` 的 `prcDirty` 提交；
 3. 每个采样点记录时间戳，按存活时间计算亮度和半径：鼠标越快，保留的轨迹越长；停手后整条拖尾在设定时间内自然淡完；
 4. 平滑改用 Chaikin 切角算法，曲线始终在控制点围成的凸包内，不会像 Catmull-Rom 那样过冲打结；
-5. 按弧长重采样后用圆头线段拼接出连续轨迹，线宽只由采样点的年龄决定，移动再快也不会变粗；
+5. 按弧长重采样，按年龄分 12 段路径批量绘制，线宽只由采样点的年龄决定，移动再快也不会变粗；
 6. 头部叠一层径向渐变光晕，鼠标停住后光晕和拖尾一起淡出，最后把窗口刷成全透明，空闲时几乎不占用 CPU。
 
 ## 常见问题
 
 **高速移动时尾部分叉 / 被截断？**
-已经修复：轨迹不再按长度截断，而是每个采样点存活固定时间后消失；平滑用 Chaikin 算法，不会过冲形成小圈；窗口覆盖整个屏幕，不会在边缘被裁剪。
+已经修复：轨迹不再按长度截断，而是每个采样点存活固定时间后消失；平滑用 Chaikin 算法，不会过冲形成小圈；覆盖层改为跟随轨迹的小窗口，会随轨迹自动移动和扩展，不会在边缘被裁剪。
 
 **拖尾不显示？**
 - 确认托盘图标还在、菜单显示“关闭效果”（表示当前效果开启）；
@@ -256,13 +256,13 @@ cursor-comet/
 ## 版本策略
 
 - 版本号唯一来源是根目录的 `version.txt`，`build.ps1` 自动生成程序与安装器版本，避免多处手改。
-- 只在大里程碑发版，不再为单个修复或外观微调连续发版。当前公开版本为 **1.8.0**，最新预览为 **1.8.1-preview.1**；本地开发版为 **1.8.37**（标准 Win11 标题栏 + 标准控件 + Fluent 自绘侧栏导航 + 局部刷新 + 缩放手指光标 + 响应式样式卡 + 跟随轨迹小窗口渲染 + 分段路径批量绘制，未上传）。1.x 均为开发预览，下一个稳定的里程碑是 **2.0.0**（渲染架构和工程化）。
+- 只在大里程碑发版，不再为单个修复或外观微调连续发版。当前版本为 **2.0.0**；1.x（1.8.0、1.8.1-preview.1 等）保留为开发历史，下一个里程碑是 2.x。
 - 1.x 的旧发布保留作为开发历史；之后不再把版本号当进度条。
 
 ## 已知限制
 
 - 主界面卡片、标题栏、样式卡和色板已改为标准 WinForms 控件，侧栏导航保留 Fluent 自绘（图标、选中条、响应式折叠）；不是 Mica，也没有深色模式；部分系统控件（滚动条、组合框）仍是 WinForms 原生样式。
-- 覆盖层现在是一个跟随轨迹的小型分层窗口，只提交轨迹覆盖的区域；高速移动、4K 和多屏下仍可能偏高，这是 2.0.0 继续优化的部分。
+- 覆盖层是跟随轨迹的小型分层窗口，只提交轨迹区域；高速移动、4K、多屏下 CPU 仍可能偏高，2.0.x 继续优化。
 - 主界面按主屏 DPI 手动缩放；混合 DPI 多屏下覆盖层只按主屏 DPI，副屏可能不一致。
 - 安装器已换成 Inno Setup 6，标准向导外观与自绘主界面不完全一致。
 - 已有 28 项配置/颜色/保存/迁移/备份恢复测试和 CI 构建校验；仍没有代码签名和独立 `.sln`。
