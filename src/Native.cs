@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>Win32 互操作声明。</summary>
     internal static class Native
@@ -20,6 +20,33 @@ namespace MouseTrail
         public const byte AC_SRC_ALPHA = 0x01;
 
         public const int BI_RGB = 0;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct UPDATELAYEREDWINDOWINFO
+        {
+            public int cbSize;
+            public IntPtr hdcDst;
+            public IntPtr pptDst;
+            public IntPtr psize;
+            public IntPtr hdcSrc;
+            public IntPtr pptSrc;
+            public int crKey;
+            public IntPtr pblend;
+            public int dwFlags;
+            public IntPtr prcDirty;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool UpdateLayeredWindowIndirect(IntPtr hwnd, ref UPDATELAYEREDWINDOWINFO pULWInfo);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct POINT
@@ -82,6 +109,11 @@ namespace MouseTrail
         [DllImport("user32.dll")]
         public static extern IntPtr GetDC(IntPtr hWnd);
 
+        public const int WM_SETREDRAW = 0x000B;
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
         [DllImport("user32.dll")]
         public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
 
@@ -105,6 +137,10 @@ namespace MouseTrail
         public static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref POINT pptDst,
             ref SIZE psize, IntPtr hdcSrc, ref POINT pptSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y,
+            int cx, int cy, uint uFlags);
+
         [DllImport("user32.dll")]
         public static extern bool GetCursorPos(out POINT lpPoint);
 
@@ -125,5 +161,36 @@ namespace MouseTrail
 
         [DllImport("user32.dll")]
         public static extern bool DestroyIcon(IntPtr hIcon);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct BITMAP
+        {
+            public int bmType;
+            public int bmWidth;
+            public int bmHeight;
+            public int bmWidthBytes;
+            public ushort bmPlanes;
+            public ushort bmBitsPixel;
+            public IntPtr bmBits;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct ICONINFO
+        {
+            public bool fIcon;
+            public int xHotspot;
+            public int yHotspot;
+            public IntPtr hbmMask;
+            public IntPtr hbmColor;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr CreateIconIndirect(ref ICONINFO piconinfo);
+
+        [DllImport("gdi32.dll")]
+        public static extern int GetObject(IntPtr hgdiobj, int cbBuffer, out BITMAP lpvObject);
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>把轨迹点绘制成流光 / 彩虹 / 星火 / 细线。</summary>
     internal static class TrailRenderer
@@ -42,22 +42,11 @@ namespace MouseTrail
 
             if (cfg.GlowEnabled && cfg.GlowStrength > 0.001)
             {
-                if (cfg.Style == "comet")
+                // 光标光晕常驻，不随拖尾淡出；流光额外保留跟随拖尾头部的尾焰光晕。
+                DrawCursorGlow(g, cfg, glowColor, headX, headY, dpiScale);
+                if (cfg.Style == "comet" && cfg.Enabled && headFade > 0.01f)
                 {
-                    if (!cfg.Enabled)
-                    {
-                        // 拖尾关闭时没有拖尾可跟随，光晕退回到光标周围，保持可见。
-                        DrawCursorGlow(g, cfg, glowColor, headX, headY, dpiScale);
-                    }
-                    else if (headFade > 0.01f)
-                    {
-                        // 拖尾开启时，流光的光晕跟随拖尾头部，并随拖尾一起淡出。
-                        DrawTrailGlow(g, cfg, glowColor, headX, headY, dpiScale, headFade);
-                    }
-                }
-                else
-                {
-                    DrawCursorGlow(g, cfg, glowColor, headX, headY, dpiScale);
+                    DrawTrailGlow(g, cfg, glowColor, headX, headY, dpiScale, headFade);
                 }
             }
 

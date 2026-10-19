@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>运行时绘制程序 / 托盘图标，避免额外的资源文件。</summary>
     internal static class IconFactory

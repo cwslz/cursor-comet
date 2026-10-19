@@ -13,4 +13,3 @@ tools/shots/
 
 # 由 build.ps1 根据 version.txt 生成
 src/VersionInfo.cs
-installer/VersionInfo.cs

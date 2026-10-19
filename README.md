@@ -4,7 +4,7 @@
 
 一个轻量的 Windows 鼠标轨迹特效小工具：透明覆盖层跟随鼠标，画出带光晕的拖尾，**不挡点击、不抢焦点**。
 
-> **预览版 / Preview**：1.x 为开发预览，功能和配置格式可能变化；2.0 前不建议作为日常唯一版本。反馈请附 Windows 版本、缩放比例和 `%APPDATA%\MouseTrail\error.log`。
+> **预览版 / Preview**：1.x 为开发预览，功能和配置格式可能变化；2.0 前不建议作为日常唯一版本。反馈请附 Windows 版本、缩放比例和 `%APPDATA%\CursorComet\error.log`。
 
 [![build](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml/badge.svg)](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/cwslz/cursor-comet)](https://github.com/cwslz/cursor-comet/releases/latest)
@@ -23,17 +23,18 @@
 从 [Releases](https://github.com/cwslz/cursor-comet/releases/latest) 下载 `CursorComet-Setup.exe`，双击安装。
 
 - 默认安装到 `%LOCALAPPDATA%\Programs\CursorComet`，不需要管理员权限；
-- 安装界面参考 Everything 的经典向导：语言选择 → 许可协议 → 安装位置（含所需/可用空间）→ 安装进度 → 完成；窗口固定 576×302；
+- 标准 Inno Setup 6 向导：语言（中文 / English）→ 许可协议 → 安装位置 → 附加任务 → 安装进度 → 完成；
 - 完成页可勾选“启动 Cursor Comet”，点“完成”退出；
 - 自动创建开始菜单快捷方式（打开主界面），可选桌面快捷方式；
-- 同时安装独立的 `uninstall.exe`，在“设置 → 应用”里可以直接卸载；
+- 卸载使用“设置 → 应用 → 已安装的应用”，或安装目录里的 `unins000.exe`；卸载默认保留 `%APPDATA%\CursorComet` 配置；
+- 静默安装：`CursorComet-Setup.exe /VERYSILENT /LANG=zh`，可选 `/TASKS="desktopicon,autostart"`；
 - 安装器里已经包含主程序，不需要另外下载 exe。
 
-安装器只负责安装；卸载请使用“设置 → 应用 → 已安装的应用”，或直接运行安装目录里的 `uninstall.exe`。
+安装器只负责安装；卸载请使用“设置 → 应用 → 已安装的应用”，或直接运行安装目录里的 `unins000.exe`。
 
 ### 便携版
 
-下载 `cursor-comet.exe`，双击运行，不会写入安装目录；配置文件仍然在 `%APPDATA%\MouseTrail`（历史命名）。
+下载 `cursor-comet.exe`，双击运行，不会写入安装目录；配置文件仍然在 `%APPDATA%\CursorComet`。
 
 需要 Windows 10 / 11，系统自带 .NET Framework 4.8。exe 未签名，SmartScreen 可能提示，点“更多信息 → 仍要运行”即可。也可以克隆仓库后运行 `build.ps1` 自行编译。
 
@@ -41,7 +42,7 @@
 
 | 操作 | 说明 |
 | --- | --- |
-| `Ctrl + Alt + T` | 开启 / 暂停特效 |
+| `Ctrl + Alt + T` | 全局关闭 / 开启效果 |
 | 左键 / 右键 托盘图标 | 打开托盘菜单 |
 | 托盘菜单 → 退出 | 关闭程序 |
 
@@ -49,7 +50,7 @@
 
 - **鼠标拖尾**：标题；
 - **打开主界面**：打开 Fluent 风格设置窗口；
-- **启用鼠标拖尾**：勾选/取消勾选，控制特效；
+- **关闭效果 / 开启效果**：一次性暂停/恢复拖尾、光晕、光圈；菜单文字会在下次打开时切换；
 - **退出**：关闭程序。
 
 样式、颜色、粗细、时长、语言和开机启动都在主界面里调整。
@@ -58,7 +59,7 @@
 
 - **Fluent Design 风格主界面（浅色）**：托盘菜单“打开主界面”或双击托盘图标，左侧分区导航、右侧卡片式设置，可自由拉伸
 - **中英文双语**：主界面、安装器、卸载器都可以切换语言
-- 便携版是单文件 exe（约 100 KB）；安装版是一个约 190 KB 的安装器，内部已包含主程序和独立的 `uninstall.exe`
+- 便携版是单文件 exe（约 120 KB）；安装版是约 2.1 MB 的 Inno Setup 6 安装器，内部已包含主程序，卸载器由 Inno 生成
 - 不需要安装 Python、Node 或 .NET SDK，使用 Windows 自带的 .NET Framework 4.8
 - 逐像素透明 + 鼠标穿透（`WS_EX_LAYERED | WS_EX_TRANSPARENT`），正常点击、拖拽、输入不受影响
 - 覆盖整个屏幕的透明窗口，轨迹按**固定时间**淡出：高速移动时拖尾自然变长，不会被窗口裁剪或断尾
@@ -67,7 +68,7 @@
 
 ## 配置文件
 
-位置：`%APPDATA%\MouseTrail\config.ini`（历史命名，后续版本计划迁移到 `CursorComet`）
+位置：`%APPDATA%\CursorComet\config.ini`（首次启动会从旧的 `%APPDATA%\MouseTrail\config.ini` 自动迁移）
 
 ```ini
 # 样式 / Style: comet / rainbow / sparks / minimal
@@ -100,7 +101,7 @@ lang=auto
 - 彩虹模式下颜色页只显示引导，彩虹参数在“外观 → 样式参数”里；
 - 无边框窗口：左上角品牌区和顶部标题区可拖动，右上角是最小化/最大化/关闭，边缘可缩放；
 - 窗口可自由拉伸；窄窗口自动把侧栏收成图标，内容可滚动；
-- 主界面和托盘的启用状态同步，语言切换立即生效。
+- 主界面的“启用鼠标拖尾”只控制拖尾；托盘/热键的“关闭效果”是全局暂停，会同时屏蔽拖尾、光晕和光圈；语言切换立即生效。
 
 ## 特效参数
 
@@ -144,14 +145,23 @@ lang=auto
 
 脚本会编译：
 
-- `dist\鼠标拖尾.exe`（中文文件名）
-- `dist\cursor-comet.exe`（Release 用的 ASCII 文件名）
-- `dist\uninstall.exe`（独立卸载器，安装器内嵌使用，不单独发布）
-- `dist\CursorComet-Setup.exe`（安装器，内嵌便携版和卸载器）
+- `dist\cursor-comet.exe`（主程序）
+- `dist\鼠标拖尾.exe`（中文文件名别名）
+- `dist\CursorComet-Setup.exe`（Inno Setup 6 安装器，内嵌主程序）
 
-并嵌入 `assets\app.ico` 和 `assets\app.manifest`。
+并嵌入 `assets\app.ico` 和 `assets\app.manifest`。构建安装器需要安装 Inno Setup 6（`ISCC.exe`）；`build.ps1` 会自动在 `%LOCALAPPDATA%\Programs\Inno Setup 6` 和 `Program Files (x86)` 下查找。
 
-版本号唯一来源是根目录的 `version.txt`；`build.ps1` 会据此生成 `src\VersionInfo.cs` 和 `installer\VersionInfo.cs`，这两个文件不要手改。
+构建完成后 `dist\SHA256SUMS.txt` 会列出两个产物的 SHA256。
+
+运行测试：
+
+```powershell
+.\test.ps1
+```
+
+需要先运行 `build.ps1` 生成 `src\VersionInfo.cs`。测试覆盖配置 round-trip、参数 clamp、颜色解析、原子保存失败、损坏配置回退和旧配置迁移，共 27 项。
+
+版本号唯一来源是根目录的 `version.txt`；`build.ps1` 会据此生成 `src\VersionInfo.cs`，不要手改。
 
 改图标后可以重新生成多尺寸 ico：
 
@@ -164,9 +174,8 @@ lang=auto
 ```
 cursor-comet/
 ├─ dist/                   # 本地编译输出，发布时用 Releases
-│  ├─ 鼠标拖尾.exe
 │  ├─ cursor-comet.exe
-│  ├─ uninstall.exe
+│  ├─ 鼠标拖尾.exe
 │  └─ CursorComet-Setup.exe
 ├─ src/                    # C# 源码
 │  ├─ Program.cs           # 入口、单实例、DPI
@@ -183,17 +192,19 @@ cursor-comet/
 │  ├─ AutoStart.cs         # 开机启动
 │  └─ Native.cs            # Win32 声明
 ├─ installer/
-│  ├─ Common.cs            # 安装器 / 卸载器共享代码
-│  ├─ Setup.cs             # 安装器（内嵌主程序和卸载器）
-│  └─ Uninstaller.cs       # 独立卸载器
+│  ├─ CursorComet.iss      # Inno Setup 6 安装脚本（中文 / English）
+│  └─ ChineseSimplified.isl
 ├─ assets/
 │  ├─ app.ico
 │  └─ app.manifest
 ├─ docs/                   # README 截图
+├─ tests/                  # 配置/颜色/保存测试
+│  └─ Tests.cs
 ├─ .github/workflows/build.yml   # 打 tag 自动编译并发布 Release
 ├─ tools/make-icon.ps1
 ├─ version.txt             # 版本号唯一来源
 ├─ build.ps1
+├─ test.ps1
 ├─ preview.png
 ├─ README.en.md
 ├─ CHANGELOG.md
@@ -216,18 +227,19 @@ cursor-comet/
 已经修复：轨迹不再按长度截断，而是每个采样点存活固定时间后消失；平滑用 Chaikin 算法，不会过冲形成小圈；窗口覆盖整个屏幕，不会在边缘被裁剪。
 
 **拖尾不显示？**
-- 确认托盘图标还在、菜单里“启用鼠标拖尾”是勾选状态；
+- 确认托盘图标还在、菜单显示“关闭效果”（表示当前效果开启）；
 - 按一下 `Ctrl + Alt + T` 试试；
 - 以独占全屏运行的游戏可能盖住覆盖层，改成“无边框窗口”模式即可。
+- 全屏游戏不显示拖尾时：优先在游戏里改用“无边框窗口/窗口化全屏”；仍不行可对游戏 exe 右键 → 属性 → 兼容性 → 勾选“禁用全屏优化”，或在 Windows 11 的“设置 → 系统 → 屏幕 → 显示卡 → 更改默认图形设置”里关闭“窗口化游戏优化”。独占全屏会绕过 DWM，普通桌面覆盖层无法绘制在上面，这是系统限制。浏览器全屏属于 DWM 合成，因此正常显示。
 
 **开机启动在哪关闭？**
-主界面 → 行为 → 取消勾选“开机自动启动”，或删除注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 下的 `MouseTrail`。
+主界面 → 行为 → 取消勾选“开机自动启动”，或删除注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 下的 `CursorComet`。
 
 **怎么切换语言？**
 主界面 → 语言；安装器和卸载器界面上也有语言下拉框。应用内切换会立即生效并保存。
 
 **安装版怎么卸载？**
-“设置 → 应用 → 已安装的应用 → Cursor Comet”，或直接运行 `%LOCALAPPDATA%\Programs\CursorComet\uninstall.exe`。卸载器会删除快捷方式和卸载项，配置文件默认保留（可在卸载器里勾选一并删除）。
+“设置 → 应用 → 已安装的应用 → Cursor Comet”，或直接运行 `%LOCALAPPDATA%\Programs\CursorComet\unins000.exe`。卸载会删除快捷方式和卸载项，配置文件默认保留。
 
 **会被杀毒软件误报吗？**
 程序没有联网、没有提权，只是普通的 .NET WinForms 程序；因为未签名，个别杀软可能提示，介意的话可以自己用 `build.ps1` 编译。
@@ -244,16 +256,16 @@ cursor-comet/
 ## 版本策略
 
 - 版本号唯一来源是根目录的 `version.txt`，`build.ps1` 自动生成程序与安装器版本，避免多处手改。
-- 只在大里程碑发版，不再为单个修复或外观微调连续发版。当前公开版本为 **1.8.0**，最新预览为 **1.8.1-preview.1**；1.x 均为开发预览，下一个稳定的里程碑是 **2.0.0**（安装器简化、渲染架构和工程化）。
+- 只在大里程碑发版，不再为单个修复或外观微调连续发版。当前公开版本为 **1.8.0**，最新预览为 **1.8.1-preview.1**；本地开发版为 **1.8.31**（标准 Win11 标题栏 + 标准控件 + Fluent 自绘侧栏导航 + 局部刷新 + 缩放手指光标 + 响应式样式卡 + 脏矩形渲染 + 流光光晕常驻，未上传）。1.x 均为开发预览，下一个稳定的里程碑是 **2.0.0**（渲染架构和工程化）。
 - 1.x 的旧发布保留作为开发历史；之后不再把版本号当进度条。
 
 ## 已知限制
 
-- 界面是自定义绘制的 Fluent 浅色风格，不是系统 Mica，也没有深色模式；部分系统控件（滚动条、组合框）仍是 WinForms 原生样式。
-- 全屏透明覆盖层基于 GDI+，高速移动、4K 和多屏时 CPU 开销较高；这是 2.0.0 计划替换的部分。
+- 主界面卡片、标题栏、样式卡和色板已改为标准 WinForms 控件，侧栏导航保留 Fluent 自绘（图标、选中条、响应式折叠）；不是 Mica，也没有深色模式；部分系统控件（滚动条、组合框）仍是 WinForms 原生样式。
+- 全屏透明覆盖层仍基于 GDI+，已改为脏矩形提交以减少每帧开销；高速移动、4K 和多屏下仍可能偏高，这是 2.0.0 继续替换的部分。
 - 主界面按主屏 DPI 手动缩放；混合 DPI 多屏下覆盖层只按主屏 DPI，副屏可能不一致。
-- 安装器是自绘向导，固定 576×302，未使用 Inno Setup；后续计划简化。
-- 目前没有自动化测试、代码签名和独立 `.sln`，CI 只负责构建和发布。
+- 安装器已换成 Inno Setup 6，标准向导外观与自绘主界面不完全一致。
+- 已有 27 项配置/颜色/保存/迁移测试和 CI 构建校验；仍没有代码签名和独立 `.sln`。
 
 ## 更新日志
 
@@ -263,6 +275,6 @@ cursor-comet/
 
 本项目采用 [GNU General Public License v3.0](LICENSE)（GPL-3.0）开源。
 
-Copyright (C) 2026 MouseTrail contributors
+Copyright (C) 2026 Cursor Comet contributors
 
 你可以自由使用、修改和分发；如果分发修改后的版本，需要继续以 GPL-3.0 提供源代码。

@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>极简双语字符串表：zh 为默认，en 为英文。</summary>
     internal static class L10n

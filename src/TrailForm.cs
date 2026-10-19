@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Windows.Forms;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>
     /// 置顶、鼠标穿透的全屏覆盖窗口。拖尾按固定时间淡出，不受窗口大小限制。
@@ -33,12 +35,15 @@ namespace MouseTrail
         private bool _closing;
         private int _errorCount;
         private int _dpiTick;
+        private int _topMostTick;
         private float _dpiScale = 1f;
         private float _lastCursorX;
         private float _lastCursorY;
         private bool _hasLastCursor;
         private bool _haloDirty = true;
         private bool _hadContent;
+        private bool _paused;
+        private Rectangle _lastDirty;
         private double _colorTime;
 
         public TrailForm(AppSettings cfg, bool openSettings)
@@ -47,7 +52,7 @@ namespace MouseTrail
             _openSettings = openSettings;
             _screen = SystemInformation.VirtualScreen;
 
-            Text = "MouseTrailOverlay";
+            Text = "CursorCometOverlay";
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             TopMost = true;
@@ -217,7 +222,7 @@ namespace MouseTrail
 
             if (m.Msg == Native.WM_HOTKEY && m.WParam.ToInt32() == HotkeyId)
             {
-                SetEnabled(!_cfg.Enabled);
+                TogglePause();
                 return;
             }
             base.WndProc(ref m);
@@ -236,6 +241,20 @@ namespace MouseTrail
                 {
                     Blackout();
                     return;
+                }
+
+                if (_paused)
+                {
+                    Blackout();
+                    return;
+                }
+
+                _topMostTick++;
+                if (_topMostTick >= 30)
+                {
+                    _topMostTick = 0;
+                    // 无边框全屏游戏激活后会排到 topmost 之上；定期把覆盖层重新置顶。
+                    Native.SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0002 | 0x0001 | 0x0010);
                 }
 
                 bool glow = _cfg.GlowEnabled && _cfg.GlowStrength > 0.001;
@@ -291,12 +310,28 @@ namespace MouseTrail
                 }
 
                 Graphics g = _surface.Graphics;
-                g.Clear(Color.Transparent);
                 bool drawGhost = moved && _hasLastCursor;
-                TrailRenderer.Render(g, _engine, _cfg, now, _colorTime, _screen.Left, _screen.Top,
-                    cursor.X - _screen.Left, cursor.Y - _screen.Top,
-                    _lastCursorX - _screen.Left, _lastCursorY - _screen.Top, drawGhost, _dpiScale);
-                _surface.Present(Handle, _screen.Left, _screen.Top);
+                int cursorX = cursor.X - _screen.Left;
+                int cursorY = cursor.Y - _screen.Top;
+                Rectangle dirty = ComputeDirty(cursorX, cursorY, drawGhost);
+                Rectangle bounds = new Rectangle(0, 0, _surface.Width, _surface.Height);
+                Rectangle dirtyRect = Rectangle.Intersect(Rectangle.Union(dirty, _lastDirty), bounds);
+                if (dirtyRect.Width > 0 && dirtyRect.Height > 0)
+                {
+                    g.SetClip(dirtyRect);
+                    g.CompositingMode = CompositingMode.SourceCopy;
+                    using (SolidBrush clear = new SolidBrush(Color.Transparent))
+                    {
+                        g.FillRectangle(clear, dirtyRect);
+                    }
+                    g.CompositingMode = CompositingMode.SourceOver;
+                    TrailRenderer.Render(g, _engine, _cfg, now, _colorTime, _screen.Left, _screen.Top,
+                        cursorX, cursorY,
+                        _lastCursorX - _screen.Left, _lastCursorY - _screen.Top, drawGhost, _dpiScale);
+                    g.ResetClip();
+                    _surface.Present(Handle, _screen.Left, _screen.Top, dirtyRect);
+                    _lastDirty = dirtyRect;
+                }
                 _blackoutDone = false;
                 _lastCursorX = cursor.X;
                 _lastCursorY = cursor.Y;
@@ -318,6 +353,52 @@ namespace MouseTrail
             }
         }
 
+        private Rectangle ComputeDirty(int cursorX, int cursorY, bool drawGhost)
+        {
+            float minX = cursorX;
+            float maxX = cursorX;
+            float minY = cursorY;
+            float maxY = cursorY;
+            if (drawGhost)
+            {
+                minX = Math.Min(minX, _lastCursorX - _screen.Left);
+                maxX = Math.Max(maxX, _lastCursorX - _screen.Left);
+                minY = Math.Min(minY, _lastCursorY - _screen.Top);
+                maxY = Math.Max(maxY, _lastCursorY - _screen.Top);
+            }
+
+            List<TrailEngine.Sample> samples = _engine.Samples;
+            for (int i = 0; i < samples.Count; i++)
+            {
+                TrailEngine.Sample sample = samples[i];
+                float x = sample.X - _screen.Left;
+                float y = sample.Y - _screen.Top;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+
+            List<TrailEngine.Spark> sparks = _engine.Sparks;
+            for (int i = 0; i < sparks.Count; i++)
+            {
+                TrailEngine.Spark spark = sparks[i];
+                float x = spark.X - _screen.Left;
+                float y = spark.Y - _screen.Top;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+
+            int margin = (int)((80 + _cfg.GlowRadius + _cfg.HaloThickness) * _dpiScale);
+            int left = (int)Math.Floor(minX) - margin;
+            int top = (int)Math.Floor(minY) - margin;
+            int right = (int)Math.Ceiling(maxX) + margin;
+            int bottom = (int)Math.Ceiling(maxY) + margin;
+            return Rectangle.FromLTRB(left, top, right, bottom);
+        }
+
         /// <summary>把窗口刷成完全透明，停掉绘制后不残留最后一帧。</summary>
         private void Blackout()
         {
@@ -327,6 +408,7 @@ namespace MouseTrail
             }
 
             _blackoutDone = true;
+            _lastDirty = Rectangle.Empty;
             _surface.Graphics.Clear(Color.Transparent);
             _surface.Present(Handle, _screen.Left, _screen.Top);
         }
@@ -347,6 +429,7 @@ namespace MouseTrail
                 old.Dispose();
             }
             _blackoutDone = false;
+            _lastDirty = Rectangle.Empty;
             _haloDirty = true;
             _hasLastCursor = false;
             _hadContent = false;
@@ -377,6 +460,7 @@ namespace MouseTrail
                 EnsureSurface();
                 _engine.Clear();
                 _blackoutDone = false;
+                _lastDirty = Rectangle.Empty;
                 _haloDirty = true;
                 _hasLastCursor = false;
                 _hadContent = false;
@@ -411,7 +495,7 @@ namespace MouseTrail
             _menu = new ContextMenuStrip();
             _menu.Font = FluentFonts.Create(9.5f, FontStyle.Regular);
             _menu.ShowImageMargin = false;
-            _menu.ShowCheckMargin = true;
+            _menu.ShowCheckMargin = false;
 
             ToolStripMenuItem header = new ToolStripMenuItem(L10n.T("鼠标拖尾", "Cursor Comet"));
             header.Enabled = false;
@@ -423,8 +507,9 @@ namespace MouseTrail
             openItem.Click += delegate { OpenMain(); };
             _menu.Items.Add(openItem);
 
-            _enableItem = new ToolStripMenuItem(L10n.T("启用鼠标拖尾", "Enable cursor trail"));
-            _enableItem.Click += delegate { SetEnabled(!_cfg.Enabled); };
+            _enableItem = new ToolStripMenuItem(L10n.T("关闭效果", "Disable effects"));
+            _enableItem.CheckOnClick = false;
+            _enableItem.Click += delegate { TogglePause(); };
             _menu.Items.Add(_enableItem);
 
             ToolStripMenuItem exitItem = new ToolStripMenuItem(L10n.T("退出", "Exit"));
@@ -482,7 +567,7 @@ namespace MouseTrail
             if (languageChanged)
             {
                 L10n.Set(_cfg.ResolveLanguage());
-                Text = "MouseTrailOverlay";
+                Text = "CursorCometOverlay";
                 RebuildMenu();
             }
             else
@@ -506,8 +591,27 @@ namespace MouseTrail
             {
                 return;
             }
-            _enableItem.Checked = _cfg.Enabled;
+            _enableItem.Text = _paused
+                ? L10n.T("开启效果", "Enable effects")
+                : L10n.T("关闭效果", "Disable effects");
         }
+
+        private void TogglePause()
+        {
+            _paused = !_paused;
+            _blackoutDone = false;
+            _haloDirty = true;
+            _hasLastCursor = false;
+            _hadContent = false;
+            if (_paused)
+            {
+                _engine.Clear();
+                Blackout();
+            }
+            SyncMenu();
+            UpdateTrayText();
+        }
+
         private void SetEnabled(bool enabled)
         {
             _cfg.Enabled = enabled;
@@ -529,7 +633,11 @@ namespace MouseTrail
         {
             if (_tray != null)
             {
-                if (_cfg.Enabled)
+                if (_paused)
+                {
+                    _tray.Text = L10n.T("鼠标拖尾 · 效果已关闭", "Cursor Comet · Effects off");
+                }
+                else if (_cfg.Enabled)
                 {
                     _tray.Text = L10n.T("鼠标拖尾 · 运行中", "Cursor Comet · Running");
                 }

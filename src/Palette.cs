@@ -1,7 +1,7 @@
 using System;
 using System.Drawing;
 
-namespace MouseTrail
+namespace CursorComet
 {
     internal sealed class ColorDef
     {

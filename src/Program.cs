@@ -2,12 +2,12 @@ using System;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace MouseTrail
+namespace CursorComet
 {
     internal static class Program
     {
-        private const string MutexName = "MouseTrail_SingleInstance_7C1E";
-        private const string OpenEventName = "MouseTrail_OpenSettings";
+        private const string MutexName = "CursorComet_SingleInstance_7C1E";
+        private const string OpenEventName = "CursorComet_OpenSettings";
 
         [STAThread]
         private static void Main(string[] args)
@@ -87,7 +87,7 @@ namespace MouseTrail
                             }
                         });
                         waiter.IsBackground = true;
-                        waiter.Name = "MouseTrail.OpenSettings";
+                        waiter.Name = "CursorComet.OpenSettings";
                         waiter.Start();
 
                         Application.Run(form);

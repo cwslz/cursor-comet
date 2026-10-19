@@ -5,7 +5,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>Fluent Design 风格的主设置窗口：左侧分区导航，右侧卡片内容。</summary>
     internal sealed class MainForm : Form
@@ -23,10 +23,6 @@ namespace MouseTrail
 
         private const string RepoUrl = "https://github.com/cwslz/cursor-comet";
         private const string AppVersion = VersionInfo.Version;
-        private const int WM_NCLBUTTONDOWN = 0xA1;
-        private const int WM_NCHITTEST = 0x84;
-        private const int HTCAPTION = 2;
-        private const int HTCLIENT = 1;
 
         private readonly AppSettings _cfg;
         private readonly Action<bool> _changed;
@@ -44,8 +40,11 @@ namespace MouseTrail
         private Label _sectionTitle;
         private Label _sectionSubtitle;
         private FlowLayoutPanel _cards;
-        private WindowButton _maxButton;
+        private FlowLayoutPanel _styleCardsHost;
+        private Panel _styleParamsCard;
+        private TableLayoutPanel _styleParamsContent;
         private bool _loading;
+        private bool _styleLayoutBusy;
         private bool _collapsed;
         private float _dpiScale = 1f;
 
@@ -59,7 +58,7 @@ namespace MouseTrail
             ForeColor = FluentColors.OnSurface;
             Font = FluentFonts.Create(10f, FontStyle.Regular);
             AutoScaleMode = AutoScaleMode.None;
-            FormBorderStyle = FormBorderStyle.None;
+            FormBorderStyle = FormBorderStyle.Sizable;
             try
             {
                 using (Graphics graphics = CreateGraphics())
@@ -118,68 +117,16 @@ namespace MouseTrail
         {
             base.OnResize(e);
             UpdateResponsive();
-            UpdateMaximizeIcon();
         }
 
-        private WindowButton MakeWindowButton(WindowButtonIcon icon, string tip)
+        protected override void OnShown(EventArgs e)
         {
-            WindowButton button = new WindowButton();
-            button.Icon = icon;
-            button.UiScale = _dpiScale;
-            button.Width = (int)(46 * _dpiScale);
-            button.Height = (int)(32 * _dpiScale);
-            button.Margin = new Padding(0, 0, 0, 0);
-            _toolTip.SetToolTip(button, tip);
-            return button;
-        }
-
-        private void AttachWindowDrag(Control control)
-        {
-            control.MouseDown += delegate(object sender, MouseEventArgs e)
+            base.OnShown(e);
+            BeginInvoke(new MethodInvoker(delegate
             {
-                if (e.Button == MouseButtons.Left)
-                {
-                    ReleaseCapture();
-                    SendMessage(Handle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
-                }
-            };
-            control.DoubleClick += delegate { ToggleMaximize(); };
-        }
-
-        private void ToggleMaximize()
-        {
-            if (WindowState == FormWindowState.Maximized)
-            {
-                WindowState = FormWindowState.Normal;
-            }
-            else
-            {
-                UpdateMaximizedBounds();
-                WindowState = FormWindowState.Maximized;
-            }
-        }
-
-        private void UpdateMaximizeIcon()
-        {
-            if (_maxButton == null)
-            {
-                return;
-            }
-            bool maximized = WindowState == FormWindowState.Maximized;
-            _maxButton.Icon = maximized ? WindowButtonIcon.Restore : WindowButtonIcon.Maximize;
-            _toolTip.SetToolTip(_maxButton, maximized ? L10n.T("还原", "Restore") : L10n.T("最大化", "Maximize"));
-            _maxButton.Invalidate();
-        }
-
-        private void UpdateMaximizedBounds()
-        {
-            try
-            {
-                MaximizedBounds = Screen.FromControl(this).WorkingArea;
-            }
-            catch
-            {
-            }
+                LayoutCards();
+                LayoutStyleCards();
+            }));
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -194,54 +141,6 @@ namespace MouseTrail
             {
             }
         }
-
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-            UpdateMaximizedBounds();
-            UpdateMaximizeIcon();
-        }
-
-        protected override void WndProc(ref Message m)
-        {
-            base.WndProc(ref m);
-            if (m.Msg == WM_NCHITTEST && (int)m.Result == HTCLIENT &&
-                WindowState == FormWindowState.Normal)
-            {
-                int raw = m.LParam.ToInt32();
-                Point screen = new Point((short)(raw & 0xFFFF), (short)((raw >> 16) & 0xFFFF));
-                Point point = PointToClient(screen);
-                int border = Math.Max(4, (int)(6 * _dpiScale));
-                bool left = point.X < border;
-                bool right = point.X > ClientSize.Width - border;
-                bool top = point.Y < border;
-                bool bottom = point.Y > ClientSize.Height - border;
-                if (top && left) m.Result = (IntPtr)13;
-                else if (top && right) m.Result = (IntPtr)14;
-                else if (bottom && left) m.Result = (IntPtr)16;
-                else if (bottom && right) m.Result = (IntPtr)17;
-                else if (left) m.Result = (IntPtr)10;
-                else if (right) m.Result = (IntPtr)11;
-                else if (top) m.Result = (IntPtr)12;
-                else if (bottom) m.Result = (IntPtr)15;
-            }
-        }
-
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                CreateParams cp = base.CreateParams;
-                cp.ClassStyle |= 0x00020000;
-                return cp;
-            }
-        }
-
-        [DllImport("user32.dll")]
-        private static extern bool ReleaseCapture();
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attribute, ref int value, int size);
@@ -293,15 +192,14 @@ namespace MouseTrail
             TableLayoutPanel header = new TableLayoutPanel();
             header.AutoSize = true;
             header.Dock = DockStyle.Top;
-            header.ColumnCount = 2;
+            header.ColumnCount = 1;
             header.RowCount = 2;
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             header.Padding = new Padding(
                 (int)(32 * _dpiScale), (int)(20 * _dpiScale),
-                (int)(6 * _dpiScale), (int)(8 * _dpiScale));
+                (int)(32 * _dpiScale), (int)(8 * _dpiScale));
             header.BackColor = FluentColors.Surface;
 
             _sectionTitle = new Label();
@@ -320,34 +218,9 @@ namespace MouseTrail
             _sectionSubtitle.Margin = new Padding(0, 0, 0, 0);
             header.Controls.Add(_sectionSubtitle, 0, 1);
 
-            FlowLayoutPanel windowControls = new FlowLayoutPanel();
-            windowControls.AutoSize = true;
-            windowControls.WrapContents = false;
-            windowControls.FlowDirection = FlowDirection.RightToLeft;
-            windowControls.BackColor = FluentColors.Surface;
-            windowControls.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            windowControls.Margin = new Padding(0, 0, 0, 0);
-
-            WindowButton closeButton = MakeWindowButton(WindowButtonIcon.Close, L10n.T("关闭", "Close"));
-            closeButton.Click += delegate { Close(); };
-            _maxButton = MakeWindowButton(WindowButtonIcon.Maximize, L10n.T("最大化", "Maximize"));
-            _maxButton.Click += delegate { ToggleMaximize(); };
-            WindowButton minButton = MakeWindowButton(WindowButtonIcon.Minimize, L10n.T("最小化", "Minimize"));
-            minButton.Click += delegate { WindowState = FormWindowState.Minimized; };
-
-            windowControls.Controls.Add(closeButton);
-            windowControls.Controls.Add(_maxButton);
-            windowControls.Controls.Add(minButton);
-            header.Controls.Add(windowControls, 1, 0);
-            header.SetRowSpan(windowControls, 2);
-
-            AttachWindowDrag(header);
-            AttachWindowDrag(_sectionTitle);
-            AttachWindowDrag(_sectionSubtitle);
-
             content.Controls.Add(header, 0, 0);
 
-            _cards = new FlowLayoutPanel();
+            _cards = new BufferedFlowPanel();
             _cards.Dock = DockStyle.Fill;
             _cards.AutoScroll = true;
             _cards.FlowDirection = FlowDirection.TopDown;
@@ -383,7 +256,6 @@ namespace MouseTrail
                     picture.SizeMode = PictureBoxSizeMode.StretchImage;
                     picture.Margin = new Padding(0, 0, (int)(10 * _dpiScale), 0);
                     header.Controls.Add(picture, 0, 0);
-                    AttachWindowDrag(picture);
                 }
             }
             catch
@@ -417,11 +289,6 @@ namespace MouseTrail
 
             header.Controls.Add(text, 1, 0);
             _sidebar.Controls.Add(header, 0, 0);
-
-            AttachWindowDrag(header);
-            AttachWindowDrag(text);
-            AttachWindowDrag(_appTitle);
-            AttachWindowDrag(_appSubtitle);
         }
 
         private void BuildNavList()
@@ -477,6 +344,7 @@ namespace MouseTrail
 
         private void SelectSection(Section section)
         {
+            bool same = section == _section && _cards != null && _cards.Controls.Count > 0;
             _section = section;
 
             for (int i = 0; i < _navItems.Count; i++)
@@ -490,10 +358,14 @@ namespace MouseTrail
                 _bottomItems[i].Invalidate();
             }
 
+            if (same)
+            {
+                return;
+            }
+
             _sectionTitle.Text = SectionTitle(section);
             _sectionSubtitle.Text = SectionSubtitle(section);
             RebuildCards();
-            _cards.AutoScrollPosition = new Point(0, 0);
         }
 
         private void ClearCards()
@@ -514,34 +386,63 @@ namespace MouseTrail
             }
 
             _loading = true;
-            ClearCards();
-
-            switch (_section)
+            bool wasVisible = _cards.Visible;
+            _cards.Visible = false;
+            bool redraw = _cards.IsHandleCreated;
+            if (redraw)
             {
-                case Section.Appearance:
-                    BuildAppearanceCards();
-                    break;
-                case Section.Color:
-                    BuildColorCards();
-                    break;
-                case Section.Halo:
-                    BuildHaloCards();
-                    break;
-                case Section.Behavior:
-                    BuildBehaviorCards();
-                    break;
-                case Section.Language:
-                    BuildLanguageCards();
-                    break;
-                case Section.About:
-                    BuildAboutCards();
-                    break;
-                case Section.GitHub:
-                    BuildGitHubCards();
-                    break;
+                Native.SendMessage(_cards.Handle, Native.WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+            }
+            _cards.SuspendLayout();
+            try
+            {
+                _styleParamsCard = null;
+                _styleParamsContent = null;
+                _styleCardsHost = null;
+                ClearCards();
+
+                switch (_section)
+                {
+                    case Section.Appearance:
+                        BuildAppearanceCards();
+                        break;
+                    case Section.Color:
+                        BuildColorCards();
+                        break;
+                    case Section.Halo:
+                        BuildHaloCards();
+                        break;
+                    case Section.Behavior:
+                        BuildBehaviorCards();
+                        break;
+                    case Section.Language:
+                        BuildLanguageCards();
+                        break;
+                    case Section.About:
+                        BuildAboutCards();
+                        break;
+                    case Section.GitHub:
+                        BuildGitHubCards();
+                        break;
+                }
+            }
+            finally
+            {
+                _cards.ResumeLayout(false);
+                _loading = false;
+                if (redraw)
+                {
+                    Native.SendMessage(_cards.Handle, Native.WM_SETREDRAW, new IntPtr(1), IntPtr.Zero);
+                }
+                _cards.Visible = wasVisible;
+                if (redraw)
+                {
+                    _cards.AutoScrollPosition = new Point(0, 0);
+                    _cards.Invalidate(true);
+                    _cards.Update();
+                }
             }
 
-            _loading = false;
             _cards.PerformLayout();
             LayoutCards();
         }
@@ -566,15 +467,58 @@ namespace MouseTrail
                 card.Width = width;
                 card.PerformLayout();
             }
+            _cards.PerformLayout();
+            LayoutStyleCards();
         }
 
-        private void AddCard(string title, string subtitle, Control content, string note = null)
+        private void LayoutStyleCards()
         {
-            RoundedPanel card = new RoundedPanel();
-            card.Radius = (int)(8 * _dpiScale);
-            card.FillColor = FluentColors.Card;
-            card.BorderColor = FluentColors.Stroke;
-            card.BorderWidth = 1f;
+            if (_styleCardsHost == null || _styleLayoutBusy)
+            {
+                return;
+            }
+
+            _styleLayoutBusy = true;
+            try
+            {
+                int gap = (int)(10 * _dpiScale);
+                int minWidth = (int)(165 * _dpiScale);
+                int cardHeight = (int)(92 * _dpiScale);
+                int available = _styleCardsHost.ClientSize.Width;
+                if (available <= 0)
+                {
+                    return;
+                }
+                int columns = available >= (minWidth + gap) * 4
+                    ? 4
+                    : (available >= (minWidth + gap) * 2 ? 2 : 1);
+                int cardWidth = (available - gap * columns) / columns;
+                if (cardWidth < (int)(120 * _dpiScale))
+                {
+                    columns = 1;
+                    cardWidth = available - gap;
+                }
+                int rows = (4 + columns - 1) / columns;
+                _styleCardsHost.Height = rows * (cardHeight + gap) + gap;
+                for (int i = 0; i < _styleCardsHost.Controls.Count; i++)
+                {
+                    Control card = _styleCardsHost.Controls[i];
+                    card.Width = cardWidth;
+                    card.Height = cardHeight;
+                    card.Margin = new Padding(0, 0, gap, gap);
+                }
+            }
+            finally
+            {
+                _styleLayoutBusy = false;
+            }
+        }
+
+        private Panel AddCard(string title, string subtitle, Control content, string note = null)
+        {
+            Panel card = new Panel();
+            card.BackColor = FluentColors.Card;
+            card.BorderStyle = BorderStyle.FixedSingle;
             card.Padding = new Padding(
                 (int)(18 * _dpiScale), (int)(14 * _dpiScale),
                 (int)(18 * _dpiScale), (int)(16 * _dpiScale));
@@ -607,7 +551,7 @@ namespace MouseTrail
 
             if (!string.IsNullOrEmpty(note))
             {
-                InfoDot dot = MakeInfoDot(note);
+                Label dot = MakeInfoDot(note);
                 dot.Anchor = AnchorStyles.Top | AnchorStyles.Right;
                 dot.Margin = new Padding(0, 0, 0, 0);
                 layout.Controls.Add(dot, 1, 0);
@@ -634,28 +578,80 @@ namespace MouseTrail
             card.Controls.Add(layout);
 
             _cards.Controls.Add(card);
+            return card;
         }
 
-        private InfoDot MakeInfoDot(string note)
+        private RadioButton MakeColorSwatch(ColorDef def, bool selected, int size, Action apply)
         {
-            InfoDot dot = new InfoDot();
-            dot.UiScale = _dpiScale;
-            dot.Width = (int)(18 * _dpiScale);
-            dot.Height = (int)(18 * _dpiScale);
+            RadioButton swatch = new RadioButton();
+            swatch.Appearance = Appearance.Button;
+            swatch.FlatStyle = FlatStyle.Flat;
+            swatch.Text = "";
+            swatch.Tag = def;
+            swatch.AutoSize = false;
+            swatch.Size = new Size((int)(size * _dpiScale), (int)(size * _dpiScale));
+            swatch.Margin = new Padding(0, 0, (int)(10 * _dpiScale), 0);
+            swatch.BackColor = def.Value;
+            swatch.Checked = selected;
+            swatch.FlatAppearance.BorderColor = selected ? FluentColors.Accent : FluentColors.Stroke;
+            swatch.FlatAppearance.BorderSize = selected ? 2 : 1;
+            swatch.FlatAppearance.CheckedBackColor = def.Value;
+            swatch.FlatAppearance.MouseOverBackColor = def.Value;
+            swatch.Cursor = FluentCursors.Hand;
+            _toolTip.SetToolTip(swatch, L10n.T(def.Zh, def.En));
+            swatch.CheckedChanged += delegate
+            {
+                if (_loading || !swatch.Checked)
+                {
+                    return;
+                }
+                apply();
+            };
+            return swatch;
+        }
+
+        private static void RefreshSwatches(FlowLayoutPanel flow, string selectedKey)
+        {
+            bool auto = string.Equals(selectedKey, "auto", StringComparison.Ordinal);
+            for (int i = 0; i < flow.Controls.Count; i++)
+            {
+                RadioButton swatch = flow.Controls[i] as RadioButton;
+                if (swatch != null)
+                {
+                    ColorDef def = (ColorDef)swatch.Tag;
+                    bool selected = string.Equals(def.Key, selectedKey, StringComparison.Ordinal);
+                    swatch.FlatAppearance.BorderColor = selected ? FluentColors.Accent : FluentColors.Stroke;
+                    swatch.FlatAppearance.BorderSize = selected ? 2 : 1;
+                    continue;
+                }
+                Button button = flow.Controls[i] as Button;
+                if (button != null)
+                {
+                    button.BackColor = auto ? FluentColors.PrimaryContainer : FluentColors.SurfaceContainerHigh;
+                    button.ForeColor = auto ? FluentColors.OnPrimaryContainer : FluentColors.OnSurfaceVariant;
+                }
+            }
+        }
+
+        private Label MakeInfoDot(string note)
+        {
+            Label dot = new Label();
+            dot.Text = "?";
+            dot.AutoSize = true;
+            dot.Font = FluentFonts.Create(12f, FontStyle.Regular);
+            dot.ForeColor = FluentColors.Error;
             dot.BackColor = FluentColors.Card;
-            dot.Click += delegate { _toolTip.Show(note, dot, 10000); };
+            dot.Cursor = Cursors.Help;
+            dot.Margin = new Padding(0, 0, 0, 0);
             _toolTip.SetToolTip(dot, note);
             return dot;
         }
 
         private void BuildAppearanceCards()
         {
-            FluentToggle enable = new FluentToggle();
-            enable.Text = L10n.T("启用鼠标拖尾", "Enable mouse trail");
-            enable.Checked = _cfg.Enabled;
-            enable.Width = 320;
-            enable.Height = (int)(32 * _dpiScale);
-            enable.UiScale = _dpiScale;
+            CheckBox enable = FluentControls.MakeToggle(
+                L10n.T("启用鼠标拖尾", "Enable mouse trail"), _cfg.Enabled,
+                FluentColors.SurfaceContainer, _dpiScale);
             enable.CheckedChanged += delegate
             {
                 if (_loading)
@@ -670,11 +666,12 @@ namespace MouseTrail
                 "When off, the overlay stops drawing the trail."), enable);
 
             FlowLayoutPanel styles = new FlowLayoutPanel();
-            styles.AutoSize = true;
-            styles.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            styles.AutoSize = false;
             styles.Dock = DockStyle.Top;
             styles.WrapContents = true;
             styles.BackColor = FluentColors.SurfaceContainer;
+            _styleCardsHost = styles;
+            styles.SizeChanged += delegate { LayoutStyleCards(); };
 
             AddStyleCard(styles, "comet", L10n.T("流光", "Comet"),
                 L10n.T("带光晕的连续拖尾", "Continuous glowing trail"));
@@ -723,7 +720,24 @@ namespace MouseTrail
             content.RowCount = 0;
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             content.BackColor = FluentColors.SurfaceContainer;
+            _styleParamsContent = content;
+            BuildStyleParametersContent(content);
 
+            if (content.Controls.Count == 0)
+            {
+                return;
+            }
+
+            string styleNote = _cfg.Style == "comet"
+                ? L10n.T("流光同时显示光标光晕和跟随拖尾的尾焰光晕；拖尾淡出后光标光晕仍保留。两者都受光晕开关控制。",
+                    "Comet shows both a cursor glow and a trail glow; the cursor glow remains after the trail fades. Both are controlled by the Glow switch.")
+                : null;
+            _styleParamsCard = AddCard(L10n.T("样式参数", "Style parameters"),
+                L10n.T("调整当前样式的特效。", "Tune the effects of the current style."), content, styleNote);
+        }
+
+        private void BuildStyleParametersContent(TableLayoutPanel content)
+        {
             switch (_cfg.Style)
             {
                 case "comet":
@@ -738,10 +752,10 @@ namespace MouseTrail
                     moved.Margin = new Padding(0, 0, 0, (int)(6 * _dpiScale));
                     AddContentRow(content, moved);
 
-                    FluentButton openHalo = new FluentButton();
-                    openHalo.Text = L10n.T("前往光圈", "Open Halo");
-                    openHalo.FillColor = FluentColors.PrimaryContainer;
-                    openHalo.TextColor = FluentColors.OnPrimaryContainer;
+                    Button openHalo = FluentButtons.Make(
+                        L10n.T("前往光圈", "Open Halo"),
+                        FluentColors.PrimaryContainer, FluentColors.OnPrimaryContainer,
+                        Color.Transparent, (int)(32 * _dpiScale), 10f, FontStyle.Regular, _dpiScale);
                     openHalo.Click += delegate { SelectSection(Section.Halo); };
                     AddContentRow(content, openHalo);
                     break;
@@ -771,18 +785,53 @@ namespace MouseTrail
                         delegate(double v) { _cfg.MinimalOpacity = v; });
                     break;
             }
+        }
 
-            if (content.Controls.Count == 0)
+        private void RefreshStyleCards(FlowLayoutPanel host)
+        {
+            for (int i = 0; i < host.Controls.Count; i++)
+            {
+                RadioButton card = host.Controls[i] as RadioButton;
+                if (card == null)
+                {
+                    continue;
+                }
+                string key = card.Tag as string;
+                bool selected = string.Equals(key, _cfg.Style, StringComparison.Ordinal);
+                card.BackColor = selected ? FluentColors.SelectedTint : FluentColors.Card;
+                card.FlatAppearance.BorderColor = selected ? FluentColors.Accent : FluentColors.Stroke;
+                card.FlatAppearance.BorderSize = selected ? 2 : 1;
+            }
+        }
+
+        private void RefreshStyleParametersCard()
+        {
+            if (_styleParamsCard == null || _styleParamsContent == null)
             {
                 return;
             }
 
-            string styleNote = _cfg.Style == "comet"
-                ? L10n.T("请注意，流光外侧的尾焰光晕受光晕开关控制，宽度固定；这是已知问题，后续版本会修复并独立。",
-                    "Note: the comet's outer trail glow is still controlled by the Halo glow switch and has a fixed width; this is a known issue and will be separated in a later version.")
-                : null;
-            AddCard(L10n.T("样式参数", "Style parameters"),
-                L10n.T("调整当前样式的特效。", "Tune the effects of the current style."), content, styleNote);
+            _styleParamsContent.SuspendLayout();
+            try
+            {
+                for (int i = _styleParamsContent.Controls.Count - 1; i >= 0; i--)
+                {
+                    Control control = _styleParamsContent.Controls[i];
+                    _styleParamsContent.Controls.RemoveAt(i);
+                    control.Dispose();
+                }
+                _styleParamsContent.RowCount = 0;
+                _styleParamsContent.RowStyles.Clear();
+                BuildStyleParametersContent(_styleParamsContent);
+            }
+            finally
+            {
+                _styleParamsContent.ResumeLayout();
+            }
+
+            _styleParamsCard.PerformLayout();
+            _cards.PerformLayout();
+            LayoutCards();
         }
 
         private void AddRainbowRows(TableLayoutPanel host)
@@ -823,13 +872,7 @@ namespace MouseTrail
             name.Margin = new Padding(0, (int)(10 * _dpiScale), (int)(12 * _dpiScale), 0);
             row.Controls.Add(name, 0, 0);
 
-            FluentSlider slider = new FluentSlider();
-            slider.Minimum = min;
-            slider.Maximum = max;
-            slider.Step = step;
-            slider.Value = value;
-            slider.UiScale = _dpiScale;
-            slider.Height = (int)(32 * _dpiScale);
+            TrackBar slider = FluentControls.MakeSlider(min, max, value, _dpiScale, FluentColors.Card);
             slider.Dock = DockStyle.Top;
             slider.Margin = new Padding(0, (int)(4 * _dpiScale), (int)(10 * _dpiScale), 0);
             row.Controls.Add(slider, 1, 0);
@@ -851,11 +894,13 @@ namespace MouseTrail
                 {
                     return;
                 }
-                apply(slider.Value);
-                val.Text = format(slider.Value);
+                double v = FluentControls.SliderValue(slider, min, max, step);
+                apply(v);
+                val.Text = format(v);
                 _changed(false);
             };
-            slider.ValueCommitted += delegate { _cfg.Save(); };
+            slider.MouseUp += delegate { _cfg.Save(); };
+            slider.KeyUp += delegate { _cfg.Save(); };
 
             host.RowCount++;
             host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -864,29 +909,44 @@ namespace MouseTrail
 
         private void AddStyleCard(FlowLayoutPanel host, string key, string title, string subtitle)
         {
-            ChoiceCard card = new ChoiceCard();
-            card.Title = title;
-            card.Subtitle = subtitle;
-            card.Selected = string.Equals(_cfg.Style, key, StringComparison.Ordinal);
-            card.UiScale = _dpiScale;
-            card.Width = (int)(160 * _dpiScale);
-            card.Height = (int)(92 * _dpiScale);
-            card.Click += delegate
+            bool selected = string.Equals(_cfg.Style, key, StringComparison.Ordinal);
+            RadioButton card = new RadioButton();
+            card.Appearance = Appearance.Button;
+            card.FlatStyle = FlatStyle.Flat;
+            card.TextAlign = ContentAlignment.MiddleLeft;
+            card.Text = title + Environment.NewLine + subtitle;
+            card.Font = FluentFonts.Create(10f, FontStyle.Regular);
+            card.AutoSize = false;
+            card.Size = new Size((int)(165 * _dpiScale), (int)(92 * _dpiScale));
+            card.Tag = key;
+            card.Margin = new Padding(0, 0, (int)(10 * _dpiScale), (int)(10 * _dpiScale));
+            card.Padding = new Padding((int)(14 * _dpiScale), (int)(8 * _dpiScale),
+                (int)(14 * _dpiScale), (int)(8 * _dpiScale));
+            card.Checked = selected;
+            card.BackColor = selected ? FluentColors.SelectedTint : FluentColors.Card;
+            card.ForeColor = FluentColors.OnSurface;
+            card.FlatAppearance.BorderColor = selected ? FluentColors.Accent : FluentColors.Stroke;
+            card.FlatAppearance.BorderSize = selected ? 2 : 1;
+            card.FlatAppearance.CheckedBackColor = FluentColors.SelectedTint;
+            card.FlatAppearance.MouseOverBackColor = FluentColors.SubtleHover;
+            card.Cursor = FluentCursors.Hand;
+            card.CheckedChanged += delegate
             {
-                if (_loading)
+                if (_loading || !card.Checked)
                 {
                     return;
                 }
                 _cfg.Style = key;
                 _cfg.Save();
                 _changed(false);
-                BeginInvoke(new MethodInvoker(RebuildCards));
+                RefreshStyleCards(host);
+                RefreshStyleParametersCard();
             };
             if (key == "rainbow")
             {
-                InfoDot dot = MakeInfoDot(L10n.T("本软件的彩虹是随着鼠标的运动而改变的，并非自行跳动。",
+                Label dot = MakeInfoDot(L10n.T("本软件的彩虹是随着鼠标的运动而改变的，并非自行跳动。",
                     "The rainbow follows mouse movement; it does not animate by itself."));
-                dot.BackColor = card.Selected ? FluentColors.SelectedTint : FluentColors.Card;
+                dot.BackColor = selected ? FluentColors.SelectedTint : FluentColors.Card;
                 dot.Anchor = AnchorStyles.Top | AnchorStyles.Right;
                 dot.Location = new Point(card.Width - dot.Width - (int)(8 * _dpiScale),
                     (int)(8 * _dpiScale));
@@ -919,10 +979,10 @@ namespace MouseTrail
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.Controls.Add(note, 0, content.RowCount - 1);
 
-            FluentButton go = new FluentButton();
-            go.Text = L10n.T("前往外观", "Go to Appearance");
-            go.FillColor = FluentColors.Primary;
-            go.TextColor = FluentColors.OnPrimary;
+            Button go = FluentButtons.Make(
+                L10n.T("前往外观", "Go to Appearance"),
+                FluentColors.Primary, FluentColors.OnPrimary,
+                Color.Transparent, (int)(32 * _dpiScale), 10f, FontStyle.Regular, _dpiScale);
             go.Click += delegate { SelectSection(Section.Appearance); };
             content.RowCount++;
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -946,32 +1006,6 @@ namespace MouseTrail
             flow.WrapContents = true;
             flow.BackColor = FluentColors.SurfaceContainer;
 
-            for (int i = 0; i < Palette.Definitions.Length; i++)
-            {
-                ColorDef def = Palette.Definitions[i];
-                ColorSwatch swatch = new ColorSwatch();
-                swatch.SwatchColor = def.Value;
-                swatch.Selected = string.Equals(_cfg.ColorName, def.Key, StringComparison.Ordinal);
-                swatch.ColorName = def.Key;
-                swatch.UiScale = _dpiScale;
-                swatch.Width = (int)(46 * _dpiScale);
-                swatch.Height = (int)(46 * _dpiScale);
-                _toolTip.SetToolTip(swatch, L10n.T(def.Zh, def.En));
-                string key = def.Key;
-                swatch.Click += delegate
-                {
-                    if (_loading)
-                    {
-                        return;
-                    }
-                    _cfg.ColorName = key;
-                    _cfg.Save();
-                    _changed(false);
-                    BeginInvoke(new MethodInvoker(RebuildCards));
-                };
-                flow.Controls.Add(swatch);
-            }
-
             Label current = new Label();
             current.AutoSize = true;
             current.Text = L10n.T("当前颜色：", "Current color: ") + Palette.Display(_cfg.ColorName);
@@ -979,6 +1013,23 @@ namespace MouseTrail
             current.BackColor = FluentColors.SurfaceContainer;
             current.Font = new Font(Font.FontFamily, 9f);
             current.Margin = new Padding(0, 8, 0, 0);
+
+            for (int i = 0; i < Palette.Definitions.Length; i++)
+            {
+                ColorDef def = Palette.Definitions[i];
+                string key = def.Key;
+                RadioButton swatch = MakeColorSwatch(def,
+                    string.Equals(_cfg.ColorName, def.Key, StringComparison.Ordinal), 46,
+                    delegate
+                    {
+                        _cfg.ColorName = key;
+                        _cfg.Save();
+                        _changed(false);
+                        RefreshSwatches(flow, _cfg.ColorName);
+                        current.Text = L10n.T("当前颜色：", "Current color: ") + Palette.Display(_cfg.ColorName);
+                    });
+                flow.Controls.Add(swatch);
+            }
 
             TableLayoutPanel content = new TableLayoutPanel();
             content.AutoSize = true;
@@ -1006,13 +1057,9 @@ namespace MouseTrail
             glowContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             glowContent.BackColor = FluentColors.SurfaceContainer;
 
-            FluentToggle glowToggle = new FluentToggle();
-            glowToggle.Text = L10n.T("显示光晕", "Show glow");
-            glowToggle.Checked = _cfg.GlowEnabled;
-            glowToggle.Width = (int)(360 * _dpiScale);
-            glowToggle.Height = (int)(34 * _dpiScale);
-            glowToggle.UiScale = _dpiScale;
-            glowToggle.Margin = new Padding(0, 0, 0, (int)(4 * _dpiScale));
+            CheckBox glowToggle = FluentControls.MakeToggle(
+                L10n.T("显示光晕", "Show glow"), _cfg.GlowEnabled,
+                FluentColors.SurfaceContainer, _dpiScale);
             glowToggle.CheckedChanged += delegate
             {
                 if (_loading)
@@ -1046,13 +1093,9 @@ namespace MouseTrail
             haloContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             haloContent.BackColor = FluentColors.SurfaceContainer;
 
-            FluentToggle haloToggle = new FluentToggle();
-            haloToggle.Text = L10n.T("显示光圈", "Show halo");
-            haloToggle.Checked = _cfg.HaloEnabled;
-            haloToggle.Width = (int)(360 * _dpiScale);
-            haloToggle.Height = (int)(34 * _dpiScale);
-            haloToggle.UiScale = _dpiScale;
-            haloToggle.Margin = new Padding(0, 0, 0, (int)(4 * _dpiScale));
+            CheckBox haloToggle = FluentControls.MakeToggle(
+                L10n.T("显示光圈", "Show halo"), _cfg.HaloEnabled,
+                FluentColors.SurfaceContainer, _dpiScale);
             haloToggle.CheckedChanged += delegate
             {
                 if (_loading)
@@ -1113,13 +1156,11 @@ namespace MouseTrail
             flow.Margin = new Padding(0, (int)(4 * _dpiScale), 0, 0);
 
             bool auto = string.Equals(current, "auto", StringComparison.Ordinal);
-            FluentButton autoButton = new FluentButton();
-            autoButton.Text = L10n.T("跟随", "Auto");
-            autoButton.Font = new Font(Font.FontFamily, 9f);
-            autoButton.FillColor = auto ? FluentColors.PrimaryContainer : FluentColors.SurfaceContainerHigh;
-            autoButton.TextColor = auto ? FluentColors.OnPrimaryContainer : FluentColors.OnSurfaceVariant;
-            autoButton.BorderColor = FluentColors.OutlineVariant;
-            autoButton.Height = (int)(30 * _dpiScale);
+            Button autoButton = FluentButtons.Make(
+                L10n.T("跟随", "Auto"),
+                auto ? FluentColors.PrimaryContainer : FluentColors.SurfaceContainerHigh,
+                auto ? FluentColors.OnPrimaryContainer : FluentColors.OnSurfaceVariant,
+                FluentColors.OutlineVariant, (int)(30 * _dpiScale), 9f, FontStyle.Regular, _dpiScale);
             autoButton.Margin = new Padding(0, 0, (int)(8 * _dpiScale), (int)(6 * _dpiScale));
             autoButton.Click += delegate
             {
@@ -1130,34 +1171,23 @@ namespace MouseTrail
                 apply("auto");
                 _cfg.Save();
                 _changed(false);
-                BeginInvoke(new MethodInvoker(RebuildCards));
+                RefreshSwatches(flow, "auto");
             };
             flow.Controls.Add(autoButton);
 
             for (int i = 0; i < Palette.Definitions.Length; i++)
             {
                 ColorDef def = Palette.Definitions[i];
-                ColorSwatch swatch = new ColorSwatch();
-                swatch.SwatchColor = def.Value;
-                swatch.Selected = string.Equals(current, def.Key, StringComparison.Ordinal);
-                swatch.ColorName = def.Key;
-                swatch.UiScale = _dpiScale;
-                swatch.Width = (int)(34 * _dpiScale);
-                swatch.Height = (int)(34 * _dpiScale);
-                swatch.Margin = new Padding(0, 0, (int)(8 * _dpiScale), (int)(6 * _dpiScale));
-                _toolTip.SetToolTip(swatch, L10n.T(def.Zh, def.En));
                 string key = def.Key;
-                swatch.Click += delegate
-                {
-                    if (_loading)
+                RadioButton swatch = MakeColorSwatch(def,
+                    string.Equals(current, def.Key, StringComparison.Ordinal), 34,
+                    delegate
                     {
-                        return;
-                    }
-                    apply(key);
-                    _cfg.Save();
-                    _changed(false);
-                    BeginInvoke(new MethodInvoker(RebuildCards));
-                };
+                        apply(key);
+                        _cfg.Save();
+                        _changed(false);
+                        RefreshSwatches(flow, key);
+                    });
                 flow.Controls.Add(swatch);
             }
 
@@ -1183,12 +1213,9 @@ namespace MouseTrail
             toggles.WrapContents = false;
             toggles.BackColor = FluentColors.SurfaceContainer;
 
-            FluentToggle startup = new FluentToggle();
-            startup.Text = L10n.T("开机自动启动", "Start with Windows");
-            startup.Checked = AutoStart.IsEnabled();
-            startup.Width = 360;
-            startup.Height = (int)(34 * _dpiScale);
-            startup.UiScale = _dpiScale;
+            CheckBox startup = FluentControls.MakeToggle(
+                L10n.T("开机自动启动", "Start with Windows"), AutoStart.IsEnabled(),
+                FluentColors.SurfaceContainer, _dpiScale);
             startup.CheckedChanged += delegate
             {
                 if (_loading)
@@ -1200,12 +1227,9 @@ namespace MouseTrail
             };
             toggles.Controls.Add(startup);
 
-            FluentToggle tips = new FluentToggle();
-            tips.Text = L10n.T("首次启动显示提示", "Show a tip on first launch");
-            tips.Checked = _cfg.ShowTip;
-            tips.Width = 360;
-            tips.Height = (int)(34 * _dpiScale);
-            tips.UiScale = _dpiScale;
+            CheckBox tips = FluentControls.MakeToggle(
+                L10n.T("首次启动显示提示", "Show a tip on first launch"), _cfg.ShowTip,
+                FluentColors.SurfaceContainer, _dpiScale);
             tips.Margin = new Padding(0, 6, 0, 0);
             tips.CheckedChanged += delegate
             {
@@ -1228,11 +1252,10 @@ namespace MouseTrail
             actions.WrapContents = true;
             actions.BackColor = FluentColors.SurfaceContainer;
 
-            FluentButton reset = new FluentButton();
-            reset.Text = L10n.T("恢复默认设置", "Reset to defaults");
-            reset.FillColor = FluentColors.SecondaryContainer;
-            reset.TextColor = FluentColors.OnSecondaryContainer;
-            reset.BorderColor = FluentColors.Stroke;
+            Button reset = FluentButtons.Make(
+                L10n.T("恢复默认设置", "Reset to defaults"),
+                FluentColors.SecondaryContainer, FluentColors.OnSecondaryContainer,
+                FluentColors.Stroke, (int)(32 * _dpiScale), 10f, FontStyle.Regular, _dpiScale);
             reset.Click += delegate
             {
                 using (ConfirmDialog dialog = new ConfirmDialog(
@@ -1256,11 +1279,10 @@ namespace MouseTrail
             };
             actions.Controls.Add(reset);
 
-            FluentButton folder = new FluentButton();
-            folder.Text = L10n.T("打开配置文件夹", "Open config folder");
-            folder.FillColor = FluentColors.SurfaceContainerHigh;
-            folder.TextColor = FluentColors.OnSurface;
-            folder.BorderColor = FluentColors.Stroke;
+            Button folder = FluentButtons.Make(
+                L10n.T("打开配置文件夹", "Open config folder"),
+                FluentColors.SurfaceContainerHigh, FluentColors.OnSurface,
+                FluentColors.Stroke, (int)(32 * _dpiScale), 10f, FontStyle.Regular, _dpiScale);
             folder.Margin = new Padding(8, 0, 0, 0);
             folder.Click += delegate
             {
@@ -1319,12 +1341,12 @@ namespace MouseTrail
         private void AddLanguageButton(FlowLayoutPanel host, string value, string text)
         {
             bool selected = string.Equals(_cfg.Language, value, StringComparison.Ordinal);
-            FluentButton button = new FluentButton();
-            button.Text = text;
-            button.FillColor = selected ? FluentColors.PrimaryContainer : FluentColors.SurfaceContainerHigh;
-            button.TextColor = selected ? FluentColors.OnPrimaryContainer : FluentColors.OnSurface;
-            button.BorderColor = selected ? FluentColors.Accent : FluentColors.Stroke;
-            button.Radius = 4;
+            Button button = FluentButtons.Make(
+                text,
+                selected ? FluentColors.PrimaryContainer : FluentColors.SurfaceContainerHigh,
+                selected ? FluentColors.OnPrimaryContainer : FluentColors.OnSurface,
+                selected ? FluentColors.Accent : FluentColors.Stroke,
+                (int)(32 * _dpiScale), 10f, FontStyle.Regular, _dpiScale);
             button.Margin = new Padding(0, 0, 8, 8);
             button.Click += delegate
             {
@@ -1444,10 +1466,10 @@ namespace MouseTrail
             description.Margin = new Padding(0, 6, 0, 10);
             content.Controls.Add(description, 0, 1);
 
-            FluentButton open = new FluentButton();
-            open.Text = L10n.T("在浏览器中打开", "Open in browser");
-            open.FillColor = FluentColors.Primary;
-            open.TextColor = FluentColors.OnPrimary;
+            Button open = FluentButtons.Make(
+                L10n.T("在浏览器中打开", "Open in browser"),
+                FluentColors.Primary, FluentColors.OnPrimary,
+                Color.Transparent, (int)(32 * _dpiScale), 10f, FontStyle.Regular, _dpiScale);
             open.Click += delegate
             {
                 try

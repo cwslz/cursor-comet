@@ -3,9 +3,9 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace MouseTrail
+namespace CursorComet
 {
-    /// <summary>用户配置，保存在 %APPDATA%\MouseTrail\config.ini。</summary>
+    /// <summary>用户配置，保存在 %APPDATA%\CursorComet\config.ini（旧目录 %APPDATA%\MouseTrail 会自动迁移）。</summary>
     internal sealed class AppSettings
     {
         public const string DefaultStyle = "comet";
@@ -40,10 +40,45 @@ namespace MouseTrail
         public double MinimalWidth = 1.0;
         public double MinimalOpacity = 1.0;
 
+        private static string _testDataDirectory;
+        private static string _testLegacyDataDirectory;
+
+        internal static void SetDataDirectoryForTests(string path)
+        {
+            _testDataDirectory = path;
+        }
+
+        internal static void SetLegacyDataDirectoryForTests(string path)
+        {
+            _testLegacyDataDirectory = path;
+        }
+
+        internal static void ResetDataDirectoryForTests()
+        {
+            _testDataDirectory = null;
+            _testLegacyDataDirectory = null;
+        }
+
         public static string Folder
         {
             get
             {
+                if (!string.IsNullOrEmpty(_testDataDirectory))
+                {
+                    return _testDataDirectory;
+                }
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CursorComet");
+            }
+        }
+
+        public static string LegacyFolder
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(_testLegacyDataDirectory))
+                {
+                    return _testLegacyDataDirectory;
+                }
                 return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MouseTrail");
             }
         }
@@ -51,6 +86,28 @@ namespace MouseTrail
         public static string FilePath
         {
             get { return Path.Combine(Folder, "config.ini"); }
+        }
+
+        public static string LegacyFilePath
+        {
+            get { return Path.Combine(LegacyFolder, "config.ini"); }
+        }
+
+        private static void EnsureMigrated()
+        {
+            try
+            {
+                if (File.Exists(FilePath) || !File.Exists(LegacyFilePath))
+                {
+                    return;
+                }
+                Directory.CreateDirectory(Folder);
+                File.Copy(LegacyFilePath, FilePath, false);
+            }
+            catch (Exception ex)
+            {
+                Program.Log(ex);
+            }
         }
 
         public void Reset()
@@ -94,14 +151,16 @@ namespace MouseTrail
             bool hasLife = false;
             int legacyLength = -1;
 
+            EnsureMigrated();
+            string path = File.Exists(FilePath) ? FilePath : (File.Exists(LegacyFilePath) ? LegacyFilePath : FilePath);
             try
             {
-                if (!File.Exists(FilePath))
+                if (!File.Exists(path))
                 {
                     return settings;
                 }
 
-                string[] lines = File.ReadAllLines(FilePath, Encoding.UTF8);
+                string[] lines = File.ReadAllLines(path, Encoding.UTF8);
                 for (int i = 0; i < lines.Length; i++)
                 {
                     string line = lines[i].Trim();
@@ -233,7 +292,7 @@ namespace MouseTrail
             }
             catch (Exception ex)
             {
-                TryBackupCorruptConfig();
+                TryBackupCorruptConfig(path);
                 Program.Log(ex);
             }
 
@@ -298,7 +357,7 @@ namespace MouseTrail
             {
                 Directory.CreateDirectory(Folder);
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine("# MouseTrail / 鼠标拖尾 配置：可直接修改，重启后生效");
+                sb.AppendLine("# Cursor Comet / 鼠标拖尾 配置：可直接修改，重启后生效");
                 sb.AppendLine("# 样式 / Style: comet / rainbow / sparks / minimal");
                 sb.AppendLine("style=" + Style);
                 sb.AppendLine("# 颜色 / Color: cyan / violet / pink / gold / mint / white");
@@ -346,16 +405,16 @@ namespace MouseTrail
             }
         }
 
-        private static void TryBackupCorruptConfig()
+        private static void TryBackupCorruptConfig(string path)
         {
             try
             {
-                if (!File.Exists(FilePath))
+                if (!File.Exists(path))
                 {
                     return;
                 }
-                string backup = FilePath + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
-                File.Copy(FilePath, backup, true);
+                string backup = path + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                File.Copy(path, backup, true);
             }
             catch
             {

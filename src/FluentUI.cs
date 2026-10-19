@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>Microsoft Fluent Design（Windows 11 浅色）配色。</summary>
     internal static class FluentColors
@@ -90,6 +90,98 @@ namespace MouseTrail
         }
     }
 
+    /// <summary>标准 WinForms 按钮的 Fluent 轻量主题，替代原来的自绘按钮。</summary>
+    internal static class FluentButtons
+    {
+        public static Button Make(string text, Color fill, Color textColor, Color border,
+            int height, float fontSize, FontStyle fontStyle, float scale)
+        {
+            Button button = new Button();
+            button.Text = text;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = border.A > 0 ? 1 : 0;
+            if (border.A > 0)
+            {
+                button.FlatAppearance.BorderColor = border;
+            }
+            bool light = fill.GetBrightness() > 0.6f;
+            button.FlatAppearance.MouseOverBackColor = light
+                ? FluentDraw.Mix(fill, Color.Black, 0.04f)
+                : FluentDraw.Mix(fill, Color.White, 0.12f);
+            button.FlatAppearance.MouseDownBackColor = FluentDraw.Mix(fill, Color.Black, 0.08f);
+            button.BackColor = fill;
+            button.ForeColor = textColor;
+            button.UseVisualStyleBackColor = false;
+            button.Font = FluentFonts.Create(fontSize, fontStyle);
+            button.Height = height;
+            button.MinimumSize = new Size((int)(88 * scale), height);
+            button.Padding = new Padding((int)(12 * scale), 4, (int)(12 * scale), 4);
+            button.AutoSize = true;
+            button.Cursor = FluentCursors.Hand;
+            button.Resize += delegate
+            {
+                using (GraphicsPath path = FluentDraw.RoundRect(
+                    new Rectangle(0, 0, button.Width, button.Height), (int)(4 * scale)))
+                {
+                    button.Region = new Region(path);
+                }
+            };
+            return button;
+        }
+    }
+
+    /// <summary>标准 WinForms 开关/滑块的 Fluent 轻量主题。</summary>
+    internal static class FluentControls
+    {
+        public static CheckBox MakeToggle(string text, bool isChecked, Color background, float scale)
+        {
+            CheckBox box = new CheckBox();
+            box.Text = text;
+            box.Checked = isChecked;
+            box.AutoSize = true;
+            box.Font = FluentFonts.Create(10f, FontStyle.Regular);
+            box.ForeColor = FluentColors.OnSurface;
+            box.BackColor = background;
+            box.Cursor = FluentCursors.Hand;
+            box.Margin = new Padding(0, (int)(2 * scale), 0, (int)(4 * scale));
+            return box;
+        }
+
+        public static TrackBar MakeSlider(double min, double max, double value, float scale, Color background)
+        {
+            TrackBar bar = new TrackBar();
+            bar.Minimum = 0;
+            bar.Maximum = 1000;
+            bar.TickStyle = TickStyle.None;
+            bar.AutoSize = false;
+            bar.Height = (int)(32 * scale);
+            bar.SmallChange = 1;
+            bar.LargeChange = 10;
+            bar.BackColor = background;
+            bar.Value = ValueToPosition(min, max, value);
+            return bar;
+        }
+
+        public static double SliderValue(TrackBar bar, double min, double max, double step)
+        {
+            double raw = min + (max - min) * (bar.Value / 1000.0);
+            if (step > 0)
+            {
+                raw = Math.Round(raw / step) * step;
+            }
+            return Math.Max(min, Math.Min(max, raw));
+        }
+
+        private static int ValueToPosition(double min, double max, double value)
+        {
+            if (max <= min)
+            {
+                return 0;
+            }
+            double t = (value - min) / (max - min);
+            return (int)Math.Round(Math.Max(0.0, Math.Min(1.0, t)) * 1000);
+        }
+    }
     internal enum NavIcon
     {
         Sparkle,
@@ -268,691 +360,6 @@ namespace MouseTrail
         }
     }
 
-    internal class RoundedPanel : Panel
-    {
-        public int Radius = 8;
-        public Color FillColor = FluentColors.Card;
-        public Color BorderColor = FluentColors.Stroke;
-        public float BorderWidth = 1f;
-
-        public RoundedPanel()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            using (GraphicsPath path = FluentDraw.RoundRect(rect, Radius))
-            {
-                if (FillColor.A > 0)
-                {
-                    using (SolidBrush brush = new SolidBrush(FillColor))
-                    {
-                        e.Graphics.FillPath(brush, path);
-                    }
-                }
-                if (BorderColor.A > 0)
-                {
-                    using (Pen pen = new Pen(BorderColor, BorderWidth))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
-                }
-            }
-            base.OnPaint(e);
-        }
-    }
-
-    internal class FluentButton : Button
-    {
-        public Color FillColor = FluentColors.Primary;
-        public Color TextColor = FluentColors.OnPrimary;
-        public Color BorderColor = Color.Transparent;
-        public float BorderWidth = 1f;
-        public Color HoverColor = Color.Empty;
-        public int Radius = 4;
-
-        private bool _hover;
-        private bool _pressed;
-
-        public FluentButton()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
-            FlatStyle = FlatStyle.Flat;
-            FlatAppearance.BorderSize = 0;
-            UseVisualStyleBackColor = false;
-            BackColor = Color.Transparent;
-            Cursor = Cursors.Hand;
-            Font = FluentFonts.Create(10f, FontStyle.Regular);
-            AutoSize = true;
-            MinimumSize = new Size(88, 32);
-            Padding = new Padding(12, 4, 12, 4);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            FillBackground(e.Graphics);
-            Color fill = FillColor;
-            if (_pressed)
-            {
-                fill = FluentDraw.Mix(fill, Color.Black, 0.08f);
-            }
-            else if (_hover)
-            {
-                if (HoverColor.A > 0)
-                {
-                    fill = HoverColor;
-                }
-                else if (fill.GetBrightness() > 0.6f)
-                {
-                    fill = FluentDraw.Mix(fill, Color.Black, 0.04f);
-                }
-                else
-                {
-                    fill = FluentDraw.Mix(fill, Color.White, 0.12f);
-                }
-            }
-
-            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            using (GraphicsPath path = FluentDraw.RoundRect(rect, Radius))
-            {
-                if (fill.A > 0)
-                {
-                    using (SolidBrush brush = new SolidBrush(fill))
-                    {
-                        e.Graphics.FillPath(brush, path);
-                    }
-                }
-                if (BorderColor.A > 0)
-                {
-                    using (Pen pen = new Pen(BorderColor, BorderWidth))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
-                }
-            }
-
-            TextFormatFlags flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
-                                    TextFormatFlags.EndEllipsis;
-            Rectangle textRect = new Rectangle(8, 0, Width - 16, Height);
-            TextRenderer.DrawText(e.Graphics, Text, Font, textRect, TextColor, flags);
-        }
-
-        private void FillBackground(Graphics g)
-        {
-            Color bg = BackColor;
-            if (bg.A == 0 && Parent != null)
-            {
-                bg = Parent.BackColor;
-            }
-            using (SolidBrush brush = new SolidBrush(bg))
-            {
-                g.FillRectangle(brush, ClientRectangle);
-            }
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            FillBackground(pevent.Graphics);
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hover = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hover = false;
-            _pressed = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-
-        protected override void OnMouseDown(MouseEventArgs mevent)
-        {
-            _pressed = true;
-            Invalidate();
-            base.OnMouseDown(mevent);
-        }
-
-        protected override void OnMouseUp(MouseEventArgs mevent)
-        {
-            _pressed = false;
-            Invalidate();
-            base.OnMouseUp(mevent);
-        }
-    }
-
-    internal class FluentToggle : Control
-    {
-        private bool _hover;
-        private bool _checked;
-        public float UiScale = 1f;
-
-        public event EventHandler CheckedChanged;
-
-        public FluentToggle()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor | ControlStyles.Selectable, true);
-            BackColor = Color.Transparent;
-            Height = 32;
-            Width = 280;
-            Cursor = Cursors.Hand;
-            Font = FluentFonts.Create(10f, FontStyle.Regular);
-            TabStop = true;
-        }
-
-        public bool Checked
-        {
-            get { return _checked; }
-            set
-            {
-                if (_checked != value)
-                {
-                    _checked = value;
-                    Invalidate();
-                    if (CheckedChanged != null)
-                    {
-                        CheckedChanged(this, EventArgs.Empty);
-                    }
-                }
-            }
-        }
-
-        protected override void OnClick(EventArgs e)
-        {
-            Checked = !Checked;
-            base.OnClick(e);
-        }
-
-        protected override void OnKeyDown(KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter)
-            {
-                Checked = !Checked;
-                e.Handled = true;
-            }
-            base.OnKeyDown(e);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Color bg = BackColor;
-            if (bg.A == 0 && Parent != null)
-            {
-                bg = Parent.BackColor;
-            }
-            using (SolidBrush brush = new SolidBrush(bg))
-            {
-                e.Graphics.FillRectangle(brush, ClientRectangle);
-            }
-
-            int trackW = (int)(40 * UiScale);
-            int trackH = (int)(20 * UiScale);
-            int top = (Height - trackH) / 2;
-            Rectangle track = new Rectangle(0, top, trackW, trackH);
-            using (GraphicsPath path = FluentDraw.RoundRect(track, trackH / 2))
-            {
-                Color fill = Checked
-                    ? FluentColors.Accent
-                    : (_hover ? FluentColors.SubtleHover : Color.White);
-                using (SolidBrush brush = new SolidBrush(fill))
-                {
-                    e.Graphics.FillPath(brush, path);
-                }
-                if (!Checked)
-                {
-                    using (Pen border = new Pen(FluentColors.OnSurfaceVariant, Math.Max(1f, 1.1f * UiScale)))
-                    {
-                        e.Graphics.DrawPath(border, path);
-                    }
-                }
-            }
-
-            int knobSize = trackH - (int)(6 * UiScale);
-            int knobX = Checked
-                ? track.Right - knobSize - (int)(3 * UiScale)
-                : track.Left + (int)(3 * UiScale);
-            using (SolidBrush knob = new SolidBrush(Checked ? Color.White : FluentColors.OnSurfaceVariant))
-            {
-                e.Graphics.FillEllipse(knob, knobX, top + (trackH - knobSize) / 2, knobSize, knobSize);
-            }
-
-            int textX = trackW + (int)(12 * UiScale);
-            Rectangle textRect = new Rectangle(textX, 0, Math.Max(0, Width - textX), Height);
-            TextRenderer.DrawText(e.Graphics, Text, Font, textRect, FluentColors.OnSurface,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            Color bg = BackColor;
-            if (bg.A == 0 && Parent != null)
-            {
-                bg = Parent.BackColor;
-            }
-            using (SolidBrush brush = new SolidBrush(bg))
-            {
-                pevent.Graphics.FillRectangle(brush, ClientRectangle);
-            }
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hover = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hover = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-    }
-    internal class FluentSlider : Control
-    {
-        private double _value;
-        private bool _dragging;
-        private bool _hover;
-
-        public double Minimum = 0.0;
-        public double Maximum = 1.0;
-        public double Step = 0.05;
-        public float UiScale = 1f;
-
-        public event EventHandler ValueChanged;
-        public event EventHandler ValueCommitted;
-
-        public FluentSlider()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-            Height = 32;
-            Cursor = Cursors.Hand;
-            TabStop = true;
-        }
-
-        public double Value
-        {
-            get { return _value; }
-            set
-            {
-                double v = Math.Max(Minimum, Math.Min(Maximum, value));
-                if (Step > 0)
-                {
-                    v = Minimum + Math.Round((v - Minimum) / Step) * Step;
-                    v = Math.Max(Minimum, Math.Min(Maximum, v));
-                }
-                if (Math.Abs(v - _value) > 0.0001)
-                {
-                    _value = v;
-                    Invalidate();
-                    if (ValueChanged != null)
-                    {
-                        ValueChanged(this, EventArgs.Empty);
-                    }
-                }
-            }
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Color bg = BackColor;
-            if (bg.A == 0 && Parent != null)
-            {
-                bg = Parent.BackColor;
-            }
-            using (SolidBrush brush = new SolidBrush(bg))
-            {
-                e.Graphics.FillRectangle(brush, ClientRectangle);
-            }
-
-            int left = (int)(10 * UiScale);
-            int right = Width - left;
-            if (right <= left) return;
-            int cy = Height / 2;
-            double range = Maximum - Minimum;
-            double t = range <= 0 ? 0 : (_value - Minimum) / range;
-            int thumb = left + (int)Math.Round((right - left) * t);
-
-            int trackHeight = Math.Max(4, (int)(4 * UiScale));
-            Rectangle track = new Rectangle(left, cy - trackHeight / 2, right - left, trackHeight);
-            using (GraphicsPath path = FluentDraw.RoundRect(track, trackHeight / 2))
-            using (SolidBrush brush = new SolidBrush(FluentColors.OutlineVariant))
-            {
-                e.Graphics.FillPath(brush, path);
-            }
-
-            if (thumb > left)
-            {
-                Rectangle active = new Rectangle(left, cy - trackHeight / 2, thumb - left, trackHeight);
-                using (GraphicsPath path = FluentDraw.RoundRect(active, trackHeight / 2))
-                using (SolidBrush brush = new SolidBrush(FluentColors.Primary))
-                {
-                    e.Graphics.FillPath(brush, path);
-                }
-            }
-
-            int r = (int)((_hover || _dragging ? 11 : 10) * UiScale);
-            if (_hover || _dragging)
-            {
-                int halo = (int)(16 * UiScale);
-                using (SolidBrush brush = new SolidBrush(Color.FromArgb(30, FluentColors.Accent)))
-                {
-                    e.Graphics.FillEllipse(brush, thumb - halo, cy - halo, halo * 2, halo * 2);
-                }
-            }
-            using (SolidBrush fill = new SolidBrush(Color.White))
-            {
-                e.Graphics.FillEllipse(fill, thumb - r, cy - r, r * 2, r * 2);
-            }
-            using (Pen ring = new Pen(FluentColors.Accent, 2f))
-            {
-                e.Graphics.DrawEllipse(ring, thumb - r, cy - r, r * 2, r * 2);
-            }
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            Color bg = BackColor;
-            if (bg.A == 0 && Parent != null)
-            {
-                bg = Parent.BackColor;
-            }
-            using (SolidBrush brush = new SolidBrush(bg))
-            {
-                pevent.Graphics.FillRectangle(brush, ClientRectangle);
-            }
-        }
-
-        private void SetFromMouse(int x)
-        {
-            int left = (int)(10 * UiScale);
-            int right = Width - left;
-            if (right <= left) return;
-            double t = (double)(x - left) / (right - left);
-            t = Math.Max(0.0, Math.Min(1.0, t));
-            Value = Minimum + t * (Maximum - Minimum);
-        }
-
-        protected override void OnMouseDown(MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                _dragging = true;
-                Capture = true;
-                SetFromMouse(e.X);
-                Focus();
-            }
-            base.OnMouseDown(e);
-        }
-
-        protected override void OnMouseMove(MouseEventArgs e)
-        {
-            if (_dragging)
-            {
-                SetFromMouse(e.X);
-            }
-            base.OnMouseMove(e);
-        }
-
-        protected override void OnMouseUp(MouseEventArgs e)
-        {
-            if (_dragging)
-            {
-                _dragging = false;
-                Capture = false;
-                if (ValueCommitted != null)
-                {
-                    ValueCommitted(this, EventArgs.Empty);
-                }
-            }
-            base.OnMouseUp(e);
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hover = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hover = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-
-        protected override bool IsInputKey(Keys keyData)
-        {
-            if (keyData == Keys.Left || keyData == Keys.Right || keyData == Keys.Home || keyData == Keys.End)
-            {
-                return true;
-            }
-            return base.IsInputKey(keyData);
-        }
-
-        protected override void OnKeyDown(KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Left)
-            {
-                Value = _value - Step;
-                Commit();
-            }
-            else if (e.KeyCode == Keys.Right)
-            {
-                Value = _value + Step;
-                Commit();
-            }
-            else if (e.KeyCode == Keys.Home)
-            {
-                Value = Minimum;
-                Commit();
-            }
-            else if (e.KeyCode == Keys.End)
-            {
-                Value = Maximum;
-                Commit();
-            }
-            base.OnKeyDown(e);
-        }
-
-        private void Commit()
-        {
-            if (ValueCommitted != null)
-            {
-                ValueCommitted(this, EventArgs.Empty);
-            }
-        }
-    }
-
-    internal class ChoiceCard : Control
-    {
-        private bool _hover;
-
-        public string Title = string.Empty;
-        public string Subtitle = string.Empty;
-        public bool Selected;
-        public int Radius = 8;
-        public float UiScale = 1f;
-
-        public ChoiceCard()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-            Cursor = Cursors.Hand;
-            Size = new Size(210, 84);
-            Margin = new Padding(0, 0, 10, 10);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            Color fill = Selected
-                ? FluentColors.SelectedTint
-                : (_hover ? FluentColors.SubtleHover : FluentColors.Card);
-            using (GraphicsPath path = FluentDraw.RoundRect(rect, Radius))
-            {
-                using (SolidBrush brush = new SolidBrush(fill))
-                {
-                    e.Graphics.FillPath(brush, path);
-                }
-                if (Selected)
-                {
-                    using (Pen pen = new Pen(FluentColors.Accent, 2f))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
-                }
-                else
-                {
-                    using (Pen pen = new Pen(FluentColors.Stroke, 1f))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
-                }
-            }
-
-            Color titleColor = FluentColors.OnSurface;
-            int pad = (int)(16 * UiScale);
-            using (Font titleFont = FluentFonts.Create(11f, FontStyle.Bold))
-            {
-                TextRenderer.DrawText(e.Graphics, Title, titleFont,
-                    new Rectangle(pad, (int)(12 * UiScale), Width - pad * 2, (int)(22 * UiScale)), titleColor,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
-            }
-            using (Font subFont = FluentFonts.Create(9f, FontStyle.Regular))
-            {
-                TextRenderer.DrawText(e.Graphics, Subtitle, subFont,
-                    new Rectangle(pad, (int)(38 * UiScale), Width - pad * 2, Height - (int)(48 * UiScale)),
-                    FluentColors.OnSurfaceVariant,
-                    TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak |
-                    TextFormatFlags.EndEllipsis);
-            }
-        }
-
-        protected override void OnClick(EventArgs e)
-        {
-            base.OnClick(e);
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hover = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hover = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-    }
-
-    internal class ColorSwatch : Control
-    {
-        private bool _hover;
-
-        public Color SwatchColor = Color.White;
-        public bool Selected;
-        public string ColorName = string.Empty;
-        public float UiScale = 1f;
-
-        public ColorSwatch()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-            Size = new Size(46, 46);
-            Cursor = Cursors.Hand;
-            Margin = new Padding(0, 0, 10, 0);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Rectangle rect = new Rectangle(3, 3, Width - 7, Height - 7);
-            if (Selected)
-            {
-                using (Pen ring = new Pen(FluentColors.Primary, 2.5f))
-                {
-                    e.Graphics.DrawEllipse(ring, 1, 1, Width - 4, Height - 4);
-                }
-            }
-            else if (_hover)
-            {
-                using (Pen ring = new Pen(FluentColors.Outline, 1.5f))
-                {
-                    e.Graphics.DrawEllipse(ring, 1, 1, Width - 4, Height - 4);
-                }
-            }
-            using (SolidBrush brush = new SolidBrush(SwatchColor))
-            {
-                e.Graphics.FillEllipse(brush, rect);
-            }
-            using (Pen outline = new Pen(Color.FromArgb(60, 0, 0, 0), 1f))
-            {
-                e.Graphics.DrawEllipse(outline, rect);
-            }
-            if (Selected)
-            {
-                using (SolidBrush check = new SolidBrush(Color.White))
-                {
-                    int cx = Width / 2;
-                    int cy = Height / 2;
-                    e.Graphics.FillEllipse(check, cx - 4, cy - 4, 8, 8);
-                }
-                using (Pen checkPen = new Pen(FluentColors.Primary, 1.6f))
-                {
-                    int cx = Width / 2;
-                    int cy = Height / 2;
-                    e.Graphics.DrawLine(checkPen, cx - 4, cy, cx - 1, cy + 3);
-                    e.Graphics.DrawLine(checkPen, cx - 1, cy + 3, cx + 5, cy - 4);
-                }
-            }
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hover = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hover = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-    }
-
     internal class NavItem : Control
     {
         private bool _hover;
@@ -972,7 +379,7 @@ namespace MouseTrail
             Height = 40;
             Dock = DockStyle.Fill;
             Margin = new Padding(0, 2, 0, 2);
-            Cursor = Cursors.Hand;
+            Cursor = FluentCursors.Hand;
             Font = FluentFonts.Create(10f, FontStyle.Regular);
         }
 
@@ -1033,227 +440,11 @@ namespace MouseTrail
         }
     }
 
-    internal enum WindowButtonIcon
+    internal sealed class BufferedFlowPanel : FlowLayoutPanel
     {
-        Minimize,
-        Maximize,
-        Restore,
-        Close
-    }
-
-    internal sealed class WindowButton : Control
-    {
-        public WindowButtonIcon Icon = WindowButtonIcon.Minimize;
-        public float UiScale = 1f;
-        private static readonly string GlyphFamily = ResolveGlyphFamily();
-
-        private bool _hover;
-
-        private static string ResolveGlyphFamily()
+        public BufferedFlowPanel()
         {
-            string[] names = { "Segoe Fluent Icons", "Segoe MDL2 Assets" };
-            for (int i = 0; i < names.Length; i++)
-            {
-                try
-                {
-                    using (FontFamily family = new FontFamily(names[i]))
-                    {
-                        return names[i];
-                    }
-                }
-                catch
-                {
-                }
-            }
-            return null;
-        }
-
-        public WindowButton()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-            Width = 46;
-            Height = 32;
-            Cursor = Cursors.Hand;
-            TabStop = false;
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Color parentColor = Parent != null ? Parent.BackColor : FluentColors.Surface;
-            using (SolidBrush back = new SolidBrush(parentColor))
-            {
-                e.Graphics.FillRectangle(back, ClientRectangle);
-            }
-
-            if (_hover)
-            {
-                Color fill = Icon == WindowButtonIcon.Close
-                    ? FluentColors.Error
-                    : FluentColors.SubtleHover;
-                using (SolidBrush brush = new SolidBrush(fill))
-                {
-                    e.Graphics.FillRectangle(brush, ClientRectangle);
-                }
-            }
-
-            Color color = _hover && Icon == WindowButtonIcon.Close
-                ? Color.White
-                : FluentColors.OnSurface;
-            if (GlyphFamily != null)
-            {
-                string glyph = Icon == WindowButtonIcon.Minimize ? "\uE921"
-                    : Icon == WindowButtonIcon.Maximize ? "\uE922"
-                    : Icon == WindowButtonIcon.Restore ? "\uE923" : "\uE8BB";
-                using (Font glyphFont = new Font(GlyphFamily, 9.5f, FontStyle.Regular, GraphicsUnit.Point))
-                {
-                    TextRenderer.DrawText(e.Graphics, glyph, glyphFont, ClientRectangle, color,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
-                        TextFormatFlags.NoPadding);
-                }
-                return;
-            }
-
-            using (Pen pen = new Pen(color, Math.Max(1f, 1.2f * UiScale)))
-            {
-                pen.StartCap = LineCap.Round;
-                pen.EndCap = LineCap.Round;
-                int cx = Width / 2;
-                int cy = Height / 2;
-                int s = Math.Max(4, (int)(5 * UiScale));
-                if (Icon == WindowButtonIcon.Minimize)
-                {
-                    e.Graphics.DrawLine(pen, cx - s, cy + (int)(1 * UiScale), cx + s, cy + (int)(1 * UiScale));
-                }
-                else if (Icon == WindowButtonIcon.Maximize)
-                {
-                    e.Graphics.DrawRectangle(pen, cx - s, cy - s, s * 2, s * 2);
-                }
-                else if (Icon == WindowButtonIcon.Restore)
-                {
-                    e.Graphics.DrawRectangle(pen, cx - s + (int)(2 * UiScale), cy - s, s * 2, s * 2);
-                    e.Graphics.DrawRectangle(pen, cx - s, cy - s + (int)(2 * UiScale), s * 2, s * 2);
-                }
-                else
-                {
-                    e.Graphics.DrawLine(pen, cx - s, cy - s, cx + s, cy + s);
-                    e.Graphics.DrawLine(pen, cx + s, cy - s, cx - s, cy + s);
-                }
-            }
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            Color parentColor = Parent != null ? Parent.BackColor : FluentColors.Surface;
-            using (SolidBrush brush = new SolidBrush(parentColor))
-            {
-                pevent.Graphics.FillRectangle(brush, ClientRectangle);
-            }
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hover = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hover = false;
-            Invalidate();
-            base.OnMouseLeave(e);
+            DoubleBuffered = true;
         }
     }
-    internal sealed class InfoDot : Control
-    {
-        public float UiScale = 1f;
-
-        private bool _hover;
-
-        public InfoDot()
-        {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-            Size = new Size(18, 18);
-            Cursor = Cursors.Hand;
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Color bg = BackColor;
-            if (bg.A == 0 && Parent != null)
-            {
-                bg = Parent.BackColor;
-            }
-            using (SolidBrush back = new SolidBrush(bg))
-            {
-                e.Graphics.FillRectangle(back, ClientRectangle);
-            }
-
-            int pad = Math.Max(1, (int)(2 * UiScale));
-            Point apex = new Point(Width / 2, pad);
-            Point left = new Point(pad, Height - pad);
-            Point right = new Point(Width - pad, Height - pad);
-            Color fill = _hover ? FluentColors.ErrorContainer : bg;
-            using (GraphicsPath path = new GraphicsPath())
-            {
-                path.AddPolygon(new Point[] { apex, right, left });
-                using (SolidBrush b = new SolidBrush(fill))
-                {
-                    e.Graphics.FillPath(b, path);
-                }
-                using (Pen pen = new Pen(FluentColors.Error, Math.Max(1.2f, 1.3f * UiScale)))
-                {
-                    pen.LineJoin = LineJoin.Round;
-                    e.Graphics.DrawPath(pen, path);
-                }
-            }
-
-            int cx = Width / 2;
-            using (Pen pen = new Pen(FluentColors.Error, Math.Max(1.4f, 1.5f * UiScale)))
-            {
-                pen.StartCap = LineCap.Round;
-                pen.EndCap = LineCap.Round;
-                e.Graphics.DrawLine(pen, cx, (int)(Height * 0.38f), cx, (int)(Height * 0.62f));
-            }
-            using (SolidBrush dot = new SolidBrush(FluentColors.Error))
-            {
-                int size = Math.Max(2, (int)(2.4f * UiScale));
-                e.Graphics.FillEllipse(dot, cx - size / 2, (int)(Height * 0.74f) - size / 2, size, size);
-            }
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            Color bg = BackColor;
-            if (bg.A == 0 && Parent != null)
-            {
-                bg = Parent.BackColor;
-            }
-            using (SolidBrush b = new SolidBrush(bg))
-            {
-                pevent.Graphics.FillRectangle(b, ClientRectangle);
-            }
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hover = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hover = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-    }}
+}

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>记录鼠标轨迹，维护拖尾采样点与星火粒子。</summary>
     internal sealed class TrailEngine

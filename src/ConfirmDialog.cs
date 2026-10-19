@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>恢复默认设置前的警告确认框：淡红色、无标题栏、无右上角关闭按钮。</summary>
     internal sealed class ConfirmDialog : Form
@@ -32,14 +32,17 @@ namespace MouseTrail
             int iconSize = (int)(40 * _scale);
             Padding = new Padding(pad, pad, pad, pad);
 
-            InfoDot icon = new InfoDot();
-            icon.UiScale = _scale * 1.7f;
-            icon.Width = iconSize;
-            icon.Height = iconSize;
+            Label icon = new Label();
+            icon.Text = "?";
+            icon.AutoSize = false;
+            icon.TextAlign = ContentAlignment.MiddleCenter;
+            icon.Font = FluentFonts.Create(20f * _scale, FontStyle.Regular);
+            icon.ForeColor = FluentColors.Error;
             icon.BackColor = FluentColors.ErrorContainer;
             icon.Cursor = Cursors.Default;
             icon.TabStop = false;
             icon.Location = new Point(pad, pad);
+            icon.Size = new Size(iconSize, iconSize);
             Controls.Add(icon);
 
             int textLeft = pad + iconSize + (int)(16 * _scale);
@@ -63,13 +66,9 @@ namespace MouseTrail
             messageLabel.Location = new Point(textLeft, pad + (int)(32 * _scale));
             Controls.Add(messageLabel);
 
-            FluentButton confirm = new FluentButton();
-            confirm.Text = confirmText;
-            confirm.FillColor = FluentColors.Error;
-            confirm.TextColor = Color.White;
-            confirm.BorderColor = FluentColors.Error;
-            confirm.Height = (int)(34 * _scale);
-            confirm.Font = FluentFonts.Create(10f, FontStyle.Bold);
+            Button confirm = FluentButtons.Make(
+                confirmText, FluentColors.Error, Color.White,
+                FluentColors.Error, (int)(34 * _scale), 10f, FontStyle.Bold, _scale);
             confirm.Margin = new Padding((int)(10 * _scale), 0, 0, 0);
             confirm.Click += delegate
             {
@@ -93,7 +92,7 @@ namespace MouseTrail
             cancel.MinimumSize = new Size((int)(84 * _scale), (int)(30 * _scale));
             cancel.Padding = new Padding((int)(12 * _scale), 4, (int)(12 * _scale), 4);
             cancel.Font = FluentFonts.Create(10f, FontStyle.Regular);
-            cancel.Cursor = Cursors.Hand;
+            cancel.Cursor = FluentCursors.Hand;
             cancel.Margin = new Padding(0);
             _cancel = cancel;
             cancel.Resize += delegate

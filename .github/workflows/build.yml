@@ -18,9 +18,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Ensure Inno Setup
+        shell: powershell
+        run: |
+          if (-not (Test-Path 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe') -and -not (Test-Path "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --yes --no-progress
+          }
+
       - name: Build
         shell: cmd
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+
+      - name: Test
+        shell: powershell
+        run: .\test.ps1
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -29,6 +40,7 @@ jobs:
           path: |
             dist/cursor-comet.exe
             dist/CursorComet-Setup.exe
+            dist/SHA256SUMS.txt
 
       - name: Create release
         if: startsWith(github.ref, 'refs/tags/')
@@ -38,5 +50,6 @@ jobs:
           files: |
             dist/cursor-comet.exe
             dist/CursorComet-Setup.exe
+            dist/SHA256SUMS.txt
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}

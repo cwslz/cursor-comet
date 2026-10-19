@@ -2,13 +2,14 @@ using System;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-namespace MouseTrail
+namespace CursorComet
 {
     /// <summary>当前用户的开机自启动（HKCU Run）。</summary>
     internal static class AutoStart
     {
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string ValueName = "MouseTrail";
+        private const string ValueName = "CursorComet";
+        private const string LegacyValueName = "MouseTrail";
 
         public static bool IsEnabled()
         {
@@ -44,6 +45,7 @@ namespace MouseTrail
                     {
                         key.DeleteValue(ValueName, false);
                     }
+                    key.DeleteValue(LegacyValueName, false);
                 }
             }
             catch (Exception ex)
@@ -57,6 +59,7 @@ namespace MouseTrail
         {
             try
             {
+                MigrateLegacyValue();
                 if (!IsEnabled())
                 {
                     return;
@@ -84,6 +87,36 @@ namespace MouseTrail
             }
             catch
             {
+            }
+        }
+
+        private static void MigrateLegacyValue()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RunKey, true))
+                {
+                    if (key == null)
+                    {
+                        return;
+                    }
+
+                    object legacy = key.GetValue(LegacyValueName);
+                    if (legacy == null)
+                    {
+                        return;
+                    }
+
+                    if (key.GetValue(ValueName) == null)
+                    {
+                        key.SetValue(ValueName, "\"" + Application.ExecutablePath + "\"", RegistryValueKind.String);
+                    }
+                    key.DeleteValue(LegacyValueName, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log(ex);
             }
         }
     }
