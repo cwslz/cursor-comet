@@ -240,7 +240,7 @@ Edit the colors in `src\Palette.cs`, or the constants at the top of `src\TrailRe
 ## Versioning
 
 - `version.txt` is the single source of truth; `build.ps1` generates the app and installer versions from it.
-- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**, with **1.8.1-preview.1** as the latest preview; the local development version is **1.8.34** (standard Win11 title bar + standard controls + custom-drawn Fluent sidebar navigation + targeted refresh + scaled hand cursor + responsive style cards + follow-the-trail small-window rendering + banded path batching, not uploaded). All 1.x versions are development previews, and the next stable milestone is **2.0.0** (rendering architecture and engineering work).
+- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**, with **1.8.1-preview.1** as the latest preview; the local development version is **1.8.35** (standard Win11 title bar + standard controls + custom-drawn Fluent sidebar navigation + targeted refresh + scaled hand cursor + responsive style cards + follow-the-trail small-window rendering + banded path batching, not uploaded). All 1.x versions are development previews, and the next stable milestone is **2.0.0** (rendering architecture and engineering work).
 - Old 1.x releases stay as development history; the version number is no longer a progress bar.
 
 ## Known limitations

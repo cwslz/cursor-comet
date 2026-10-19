@@ -1,4 +1,4 @@
-﻿; Cursor Comet - Inno Setup 6 script
+; Cursor Comet - Inno Setup 6 script
 ; Build: ISCC.exe /DMyAppVersion=1.8.2 /DMyAppNumericVersion=1.8.2 installer\CursorComet.iss
 
 #ifndef MyAppVersion
@@ -65,7 +65,7 @@ Name: "autostart"; Description: "{cm:AutoStart}"; GroupDescription: "{cm:Additio
 [Files]
 Source: "..\dist\cursor-comet.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
+Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{userprograms}\Cursor Comet"; Filename: "{app}\cursor-comet.exe"; Parameters: "--settings"; WorkingDir: "{app}"; Comment: "{cm:AppComment}"
