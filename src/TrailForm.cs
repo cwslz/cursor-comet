@@ -309,29 +309,41 @@ namespace CursorComet
                     _colorTime = now;
                 }
 
-                Graphics g = _surface.Graphics;
                 bool drawGhost = moved && _hasLastCursor;
+                Rectangle dirty = ComputeDirty(cursor.X, cursor.Y, drawGhost);
+                Rectangle screenBounds = SystemInformation.VirtualScreen;
+                Rectangle windowRect = Rectangle.Intersect(
+                    Rectangle.Union(dirty, _lastDirty), screenBounds);
+                if (windowRect.Width <= 0 || windowRect.Height <= 0)
+                {
+                    Blackout();
+                    return;
+                }
+
+                if (_screen != windowRect)
+                {
+                    _screen = windowRect;
+                    Bounds = windowRect;
+                    EnsureSurface();
+                }
+
                 int cursorX = cursor.X - _screen.Left;
                 int cursorY = cursor.Y - _screen.Top;
-                Rectangle dirty = ComputeDirty(cursorX, cursorY, drawGhost);
-                Rectangle bounds = new Rectangle(0, 0, _surface.Width, _surface.Height);
-                Rectangle dirtyRect = Rectangle.Intersect(Rectangle.Union(dirty, _lastDirty), bounds);
-                if (dirtyRect.Width > 0 && dirtyRect.Height > 0)
+                Rectangle surface = new Rectangle(0, 0, _surface.Width, _surface.Height);
+                Graphics g = _surface.Graphics;
+                g.SetClip(surface);
+                g.CompositingMode = CompositingMode.SourceCopy;
+                using (SolidBrush clear = new SolidBrush(Color.Transparent))
                 {
-                    g.SetClip(dirtyRect);
-                    g.CompositingMode = CompositingMode.SourceCopy;
-                    using (SolidBrush clear = new SolidBrush(Color.Transparent))
-                    {
-                        g.FillRectangle(clear, dirtyRect);
-                    }
-                    g.CompositingMode = CompositingMode.SourceOver;
-                    TrailRenderer.Render(g, _engine, _cfg, now, _colorTime, _screen.Left, _screen.Top,
-                        cursorX, cursorY,
-                        _lastCursorX - _screen.Left, _lastCursorY - _screen.Top, drawGhost, _dpiScale);
-                    g.ResetClip();
-                    _surface.Present(Handle, _screen.Left, _screen.Top, dirtyRect);
-                    _lastDirty = dirtyRect;
+                    g.FillRectangle(clear, surface);
                 }
+                g.CompositingMode = CompositingMode.SourceOver;
+                TrailRenderer.Render(g, _engine, _cfg, now, _colorTime, _screen.Left, _screen.Top,
+                    cursorX, cursorY,
+                    _lastCursorX - _screen.Left, _lastCursorY - _screen.Top, drawGhost, _dpiScale);
+                g.ResetClip();
+                _surface.Present(Handle, _screen.Left, _screen.Top);
+                _lastDirty = windowRect;
                 _blackoutDone = false;
                 _lastCursorX = cursor.X;
                 _lastCursorY = cursor.Y;
@@ -361,18 +373,18 @@ namespace CursorComet
             float maxY = cursorY;
             if (drawGhost)
             {
-                minX = Math.Min(minX, _lastCursorX - _screen.Left);
-                maxX = Math.Max(maxX, _lastCursorX - _screen.Left);
-                minY = Math.Min(minY, _lastCursorY - _screen.Top);
-                maxY = Math.Max(maxY, _lastCursorY - _screen.Top);
+                minX = Math.Min(minX, _lastCursorX);
+                maxX = Math.Max(maxX, _lastCursorX);
+                minY = Math.Min(minY, _lastCursorY);
+                maxY = Math.Max(maxY, _lastCursorY);
             }
 
             List<TrailEngine.Sample> samples = _engine.Samples;
             for (int i = 0; i < samples.Count; i++)
             {
                 TrailEngine.Sample sample = samples[i];
-                float x = sample.X - _screen.Left;
-                float y = sample.Y - _screen.Top;
+                float x = sample.X;
+                float y = sample.Y;
                 if (x < minX) minX = x;
                 if (x > maxX) maxX = x;
                 if (y < minY) minY = y;
@@ -383,8 +395,8 @@ namespace CursorComet
             for (int i = 0; i < sparks.Count; i++)
             {
                 TrailEngine.Spark spark = sparks[i];
-                float x = spark.X - _screen.Left;
-                float y = spark.Y - _screen.Top;
+                float x = spark.X;
+                float y = spark.Y;
                 if (x < minX) minX = x;
                 if (x > maxX) maxX = x;
                 if (y < minY) minY = y;

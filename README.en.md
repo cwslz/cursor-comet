@@ -240,13 +240,13 @@ Edit the colors in `src\Palette.cs`, or the constants at the top of `src\TrailRe
 ## Versioning
 
 - `version.txt` is the single source of truth; `build.ps1` generates the app and installer versions from it.
-- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**, with **1.8.1-preview.1** as the latest preview; the local development version is **1.8.31** (standard Win11 title bar + standard controls + custom-drawn Fluent sidebar navigation + targeted refresh + scaled hand cursor + responsive style cards + dirty-rect rendering + persistent comet glow, not uploaded). All 1.x versions are development previews, and the next stable milestone is **2.0.0** (rendering architecture and engineering work).
+- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**, with **1.8.1-preview.1** as the latest preview; the local development version is **1.8.33** (standard Win11 title bar + standard controls + custom-drawn Fluent sidebar navigation + targeted refresh + scaled hand cursor + responsive style cards + follow-the-trail small-window rendering, not uploaded). All 1.x versions are development previews, and the next stable milestone is **2.0.0** (rendering architecture and engineering work).
 - Old 1.x releases stay as development history; the version number is no longer a progress bar.
 
 ## Known limitations
 
 - The main window cards, title bar, style cards and color swatches are now standard WinForms controls; the sidebar navigation remains custom-drawn (icons, selection bar, responsive collapse). It is not Mica and has no dark mode; some native WinForms controls (scrollbars, combo boxes) are unstyled.
-- The full-screen transparent overlay still uses GDI+, now with dirty-rect submission to cut per-frame cost; fast movement, 4K and multi-monitor can still be CPU-heavy. This is the part 2.0.0 continues to replace.
+- The overlay is now a small layered window that follows the trail and submits only the area it covers; fast movement, 4K and multi-monitor can still be CPU-heavy. This is the part 2.0.0 continues to optimize.
 - The main window is manually scaled for the primary display DPI; mixed-DPI multi-monitor overlays may differ.
 - The installer is now an Inno Setup 6 wizard; its standard look differs from the custom-drawn main window.
 - There are 27 config/color/save/migration tests and CI build checks; code signing and a standalone `.sln` are still missing.
