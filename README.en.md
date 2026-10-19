@@ -10,6 +10,10 @@ A lightweight Windows cursor trail effect: a transparent overlay follows the mou
 
 ![Preview](preview.png)
 
+![Fluent settings window](docs/screenshot-appearance.png)
+
+![Installer](docs/screenshot-installer.png)
+
 ## Download / Quick start
 
 ### Installer (recommended)
@@ -27,7 +31,7 @@ The setup only installs. To remove the app, use Settings → Apps, or run `unins
 
 ### Portable
 
-Download `cursor-comet.exe` and run it. It does not write an install directory; settings still live in `%APPDATA%\MouseTrail`.
+Download `cursor-comet.exe` and run it. It does not write an install directory; settings still live in `%APPDATA%\MouseTrail` (legacy name).
 
 Requires Windows 10 / 11 with .NET Framework 4.8 (built in). The exe is unsigned, so SmartScreen may warn — click “More info → Run anyway”. You can also clone the repo and run `build.ps1`.
 
@@ -42,7 +46,7 @@ The app has no main window; it appears in the notification area. Move the mouse 
 The tray menu has exactly four items:
 
 - **Cursor Comet**: title;
-- **Open main window**: opens the Fluent Design settings window;
+- **Open main window**: opens the Fluent-style settings window;
 - **Enable cursor trail**: check/uncheck to control the effect;
 - **Exit**: quit the app.
 
@@ -50,13 +54,13 @@ Style, color, thickness, duration, language and auto-start live in the main wind
 
 ## Features
 
-- **Fluent Design settings window**: open it from the tray menu or by double-clicking the tray icon; sidebar sections on the left, cards on the right, freely resizable
+- **Fluent Design-style settings window (light)**: open it from the tray menu or by double-clicking the tray icon; sidebar sections on the left, cards on the right, freely resizable
 - **Bilingual UI**: switch language in the main window, installer and uninstaller
 - Portable build is a single exe (~100 KB); the installer is ~190 KB and contains the app plus a standalone `uninstall.exe`
 - No Python, Node or .NET SDK required; uses the built-in .NET Framework 4.8
 - Per-pixel transparent + click-through (`WS_EX_LAYERED | WS_EX_TRANSPARENT`); normal clicking, dragging and typing are unaffected
 - Full-screen transparent overlay, trail fades by **fixed time**: fast movement makes it longer instead of clipping or breaking
-- High-DPI aware: thickness follows the system DPI
+- High-DPI aware on the primary display; mixed-DPI multi-monitor overlays use the primary display scale and may differ
 - Settings are saved and restored
 
 ## Settings window
@@ -102,7 +106,7 @@ In rainbow mode, the Color page only shows guidance; the color palette is not us
 
 ## Configuration
 
-Location: `%APPDATA%\MouseTrail\config.ini`
+Location: `%APPDATA%\MouseTrail\config.ini` (legacy name; planned migration to `CursorComet`)
 
 ```ini
 # Style: comet / rainbow / sparks / minimal
@@ -141,7 +145,7 @@ The script produces:
 - `dist\uninstall.exe` (standalone uninstaller, embedded by the setup and not published separately)
 - `dist\CursorComet-Setup.exe` (installer embedding the app and the uninstaller)
 
-It embeds `assets\app.ico` and `assets\app.manifest`. To regenerate the multi-size icon:
+It embeds `assets\app.ico` and `assets\app.manifest`. The single source of truth for the version is `version.txt`; `build.ps1` generates `src\VersionInfo.cs` and `installer\VersionInfo.cs` — do not edit those generated files. To regenerate the multi-size icon:
 
 ```powershell
 .\tools\make-icon.ps1
@@ -166,7 +170,7 @@ cursor-comet/
 │  ├─ Palette.cs           # colors / HSV
 │  ├─ L10n.cs              # Chinese/English strings
 │  ├─ MainForm.cs          # Fluent Design settings window
-│  ├─ MaterialUI.cs        # Material controls and palette
+│  ├─ FluentUI.cs          # Fluent controls and palette
 │  ├─ IconFactory.cs       # runtime icon
 │  ├─ AutoStart.cs         # Windows startup
 │  └─ Native.cs            # Win32 declarations
@@ -177,8 +181,10 @@ cursor-comet/
 ├─ assets/
 │  ├─ app.ico
 │  └─ app.manifest
+├─ docs/                   # README screenshots
 ├─ .github/workflows/build.yml   # build and release on tags
 ├─ tools/make-icon.ps1
+├─ version.txt             # single source of truth for the version
 ├─ build.ps1
 ├─ preview.png
 ├─ README.md
@@ -221,6 +227,20 @@ Thickness follows the system DPI of the primary monitor; across monitors with di
 
 **Can I change the color or curve?**
 Edit the colors in `src\Palette.cs`, or the constants at the top of `src\TrailRenderer.cs`, then run `build.ps1`.
+
+## Versioning
+
+- `version.txt` is the single source of truth; `build.ps1` generates the app and installer versions from it.
+- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**; the next meaningful milestone is **2.0.0** (installer simplification, rendering architecture and engineering work).
+- Old 1.x releases stay as development history; the version number is no longer a progress bar.
+
+## Known limitations
+
+- The UI is a custom-drawn Fluent-style light theme, not system Mica, and has no dark mode; some native WinForms controls (scrollbars, combo boxes) are unstyled.
+- The full-screen transparent overlay uses GDI+; fast movement, 4K and multi-monitor setups can be CPU-heavy. This is the part planned for replacement in 2.0.0.
+- The main window is manually scaled for the primary display DPI; mixed-DPI multi-monitor overlays may differ.
+- The installer is a custom-drawn wizard fixed at 576×302 (not Inno Setup); simplification is planned.
+- There are no automated tests, code signing or a standalone `.sln` yet; CI only builds and releases.
 
 ## Changelog
 

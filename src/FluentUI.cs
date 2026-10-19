@@ -6,7 +6,7 @@ using System.Windows.Forms;
 namespace MouseTrail
 {
     /// <summary>Microsoft Fluent Design（Windows 11 浅色）配色。</summary>
-    internal static class MaterialColors
+    internal static class FluentColors
     {
         public static readonly Color Primary = Color.FromArgb(0, 103, 192);
         public static readonly Color OnPrimary = Color.FromArgb(255, 255, 255);
@@ -59,29 +59,7 @@ namespace MouseTrail
         }
     }
 
-    internal static class FluentBackdrop
-    {
-        [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
-
-        public static void Apply(IntPtr hwnd)
-        {
-            try
-            {
-                int corner = 2;
-                DwmSetWindowAttribute(hwnd, 33, ref corner, sizeof(int));
-                int dark = 0;
-                DwmSetWindowAttribute(hwnd, 20, ref dark, sizeof(int));
-                int backdrop = 2;
-                DwmSetWindowAttribute(hwnd, 38, ref backdrop, sizeof(int));
-            }
-            catch
-            {
-            }
-        }
-    }
-
-    internal static class MaterialDraw
+    internal static class FluentDraw
     {
         public static GraphicsPath RoundRect(Rectangle bounds, int radius)
         {
@@ -125,7 +103,7 @@ namespace MouseTrail
         Code
     }
 
-    internal static class MaterialIcons
+    internal static class FluentIcons
     {
         public static void Draw(Graphics g, Rectangle r, NavIcon icon, Color color)
         {
@@ -293,8 +271,8 @@ namespace MouseTrail
     internal class RoundedPanel : Panel
     {
         public int Radius = 8;
-        public Color FillColor = MaterialColors.Card;
-        public Color BorderColor = MaterialColors.Stroke;
+        public Color FillColor = FluentColors.Card;
+        public Color BorderColor = FluentColors.Stroke;
         public float BorderWidth = 1f;
 
         public RoundedPanel()
@@ -309,7 +287,7 @@ namespace MouseTrail
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            using (GraphicsPath path = MaterialDraw.RoundRect(rect, Radius))
+            using (GraphicsPath path = FluentDraw.RoundRect(rect, Radius))
             {
                 if (FillColor.A > 0)
                 {
@@ -330,10 +308,10 @@ namespace MouseTrail
         }
     }
 
-    internal class MaterialButton : Button
+    internal class FluentButton : Button
     {
-        public Color FillColor = MaterialColors.Primary;
-        public Color TextColor = MaterialColors.OnPrimary;
+        public Color FillColor = FluentColors.Primary;
+        public Color TextColor = FluentColors.OnPrimary;
         public Color BorderColor = Color.Transparent;
         public float BorderWidth = 1f;
         public Color HoverColor = Color.Empty;
@@ -342,7 +320,7 @@ namespace MouseTrail
         private bool _hover;
         private bool _pressed;
 
-        public MaterialButton()
+        public FluentButton()
         {
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
@@ -365,7 +343,7 @@ namespace MouseTrail
             Color fill = FillColor;
             if (_pressed)
             {
-                fill = MaterialDraw.Mix(fill, Color.Black, 0.08f);
+                fill = FluentDraw.Mix(fill, Color.Black, 0.08f);
             }
             else if (_hover)
             {
@@ -375,16 +353,16 @@ namespace MouseTrail
                 }
                 else if (fill.GetBrightness() > 0.6f)
                 {
-                    fill = MaterialDraw.Mix(fill, Color.Black, 0.04f);
+                    fill = FluentDraw.Mix(fill, Color.Black, 0.04f);
                 }
                 else
                 {
-                    fill = MaterialDraw.Mix(fill, Color.White, 0.12f);
+                    fill = FluentDraw.Mix(fill, Color.White, 0.12f);
                 }
             }
 
             Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            using (GraphicsPath path = MaterialDraw.RoundRect(rect, Radius))
+            using (GraphicsPath path = FluentDraw.RoundRect(rect, Radius))
             {
                 if (fill.A > 0)
                 {
@@ -456,7 +434,7 @@ namespace MouseTrail
         }
     }
 
-    internal class MaterialToggle : Control
+    internal class FluentToggle : Control
     {
         private bool _hover;
         private bool _checked;
@@ -464,7 +442,7 @@ namespace MouseTrail
 
         public event EventHandler CheckedChanged;
 
-        public MaterialToggle()
+        public FluentToggle()
         {
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
@@ -527,18 +505,18 @@ namespace MouseTrail
             int trackH = (int)(20 * UiScale);
             int top = (Height - trackH) / 2;
             Rectangle track = new Rectangle(0, top, trackW, trackH);
-            using (GraphicsPath path = MaterialDraw.RoundRect(track, trackH / 2))
+            using (GraphicsPath path = FluentDraw.RoundRect(track, trackH / 2))
             {
                 Color fill = Checked
-                    ? MaterialColors.Accent
-                    : (_hover ? MaterialColors.SubtleHover : Color.White);
+                    ? FluentColors.Accent
+                    : (_hover ? FluentColors.SubtleHover : Color.White);
                 using (SolidBrush brush = new SolidBrush(fill))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
                 if (!Checked)
                 {
-                    using (Pen border = new Pen(MaterialColors.OnSurfaceVariant, Math.Max(1f, 1.1f * UiScale)))
+                    using (Pen border = new Pen(FluentColors.OnSurfaceVariant, Math.Max(1f, 1.1f * UiScale)))
                     {
                         e.Graphics.DrawPath(border, path);
                     }
@@ -549,14 +527,14 @@ namespace MouseTrail
             int knobX = Checked
                 ? track.Right - knobSize - (int)(3 * UiScale)
                 : track.Left + (int)(3 * UiScale);
-            using (SolidBrush knob = new SolidBrush(Checked ? Color.White : MaterialColors.OnSurfaceVariant))
+            using (SolidBrush knob = new SolidBrush(Checked ? Color.White : FluentColors.OnSurfaceVariant))
             {
                 e.Graphics.FillEllipse(knob, knobX, top + (trackH - knobSize) / 2, knobSize, knobSize);
             }
 
             int textX = trackW + (int)(12 * UiScale);
             Rectangle textRect = new Rectangle(textX, 0, Math.Max(0, Width - textX), Height);
-            TextRenderer.DrawText(e.Graphics, Text, Font, textRect, MaterialColors.OnSurface,
+            TextRenderer.DrawText(e.Graphics, Text, Font, textRect, FluentColors.OnSurface,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         }
 
@@ -587,7 +565,7 @@ namespace MouseTrail
             base.OnMouseLeave(e);
         }
     }
-    internal class MaterialSlider : Control
+    internal class FluentSlider : Control
     {
         private double _value;
         private bool _dragging;
@@ -601,7 +579,7 @@ namespace MouseTrail
         public event EventHandler ValueChanged;
         public event EventHandler ValueCommitted;
 
-        public MaterialSlider()
+        public FluentSlider()
         {
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
@@ -658,8 +636,8 @@ namespace MouseTrail
 
             int trackHeight = Math.Max(4, (int)(4 * UiScale));
             Rectangle track = new Rectangle(left, cy - trackHeight / 2, right - left, trackHeight);
-            using (GraphicsPath path = MaterialDraw.RoundRect(track, trackHeight / 2))
-            using (SolidBrush brush = new SolidBrush(MaterialColors.OutlineVariant))
+            using (GraphicsPath path = FluentDraw.RoundRect(track, trackHeight / 2))
+            using (SolidBrush brush = new SolidBrush(FluentColors.OutlineVariant))
             {
                 e.Graphics.FillPath(brush, path);
             }
@@ -667,8 +645,8 @@ namespace MouseTrail
             if (thumb > left)
             {
                 Rectangle active = new Rectangle(left, cy - trackHeight / 2, thumb - left, trackHeight);
-                using (GraphicsPath path = MaterialDraw.RoundRect(active, trackHeight / 2))
-                using (SolidBrush brush = new SolidBrush(MaterialColors.Primary))
+                using (GraphicsPath path = FluentDraw.RoundRect(active, trackHeight / 2))
+                using (SolidBrush brush = new SolidBrush(FluentColors.Primary))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
@@ -678,7 +656,7 @@ namespace MouseTrail
             if (_hover || _dragging)
             {
                 int halo = (int)(16 * UiScale);
-                using (SolidBrush brush = new SolidBrush(Color.FromArgb(30, MaterialColors.Accent)))
+                using (SolidBrush brush = new SolidBrush(Color.FromArgb(30, FluentColors.Accent)))
                 {
                     e.Graphics.FillEllipse(brush, thumb - halo, cy - halo, halo * 2, halo * 2);
                 }
@@ -687,7 +665,7 @@ namespace MouseTrail
             {
                 e.Graphics.FillEllipse(fill, thumb - r, cy - r, r * 2, r * 2);
             }
-            using (Pen ring = new Pen(MaterialColors.Accent, 2f))
+            using (Pen ring = new Pen(FluentColors.Accent, 2f))
             {
                 e.Graphics.DrawEllipse(ring, thumb - r, cy - r, r * 2, r * 2);
             }
@@ -834,9 +812,9 @@ namespace MouseTrail
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
             Color fill = Selected
-                ? MaterialColors.SelectedTint
-                : (_hover ? MaterialColors.SubtleHover : MaterialColors.Card);
-            using (GraphicsPath path = MaterialDraw.RoundRect(rect, Radius))
+                ? FluentColors.SelectedTint
+                : (_hover ? FluentColors.SubtleHover : FluentColors.Card);
+            using (GraphicsPath path = FluentDraw.RoundRect(rect, Radius))
             {
                 using (SolidBrush brush = new SolidBrush(fill))
                 {
@@ -844,21 +822,21 @@ namespace MouseTrail
                 }
                 if (Selected)
                 {
-                    using (Pen pen = new Pen(MaterialColors.Accent, 2f))
+                    using (Pen pen = new Pen(FluentColors.Accent, 2f))
                     {
                         e.Graphics.DrawPath(pen, path);
                     }
                 }
                 else
                 {
-                    using (Pen pen = new Pen(MaterialColors.Stroke, 1f))
+                    using (Pen pen = new Pen(FluentColors.Stroke, 1f))
                     {
                         e.Graphics.DrawPath(pen, path);
                     }
                 }
             }
 
-            Color titleColor = MaterialColors.OnSurface;
+            Color titleColor = FluentColors.OnSurface;
             int pad = (int)(16 * UiScale);
             using (Font titleFont = FluentFonts.Create(11f, FontStyle.Bold))
             {
@@ -870,7 +848,7 @@ namespace MouseTrail
             {
                 TextRenderer.DrawText(e.Graphics, Subtitle, subFont,
                     new Rectangle(pad, (int)(38 * UiScale), Width - pad * 2, Height - (int)(48 * UiScale)),
-                    MaterialColors.OnSurfaceVariant,
+                    FluentColors.OnSurfaceVariant,
                     TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak |
                     TextFormatFlags.EndEllipsis);
             }
@@ -922,14 +900,14 @@ namespace MouseTrail
             Rectangle rect = new Rectangle(3, 3, Width - 7, Height - 7);
             if (Selected)
             {
-                using (Pen ring = new Pen(MaterialColors.Primary, 2.5f))
+                using (Pen ring = new Pen(FluentColors.Primary, 2.5f))
                 {
                     e.Graphics.DrawEllipse(ring, 1, 1, Width - 4, Height - 4);
                 }
             }
             else if (_hover)
             {
-                using (Pen ring = new Pen(MaterialColors.Outline, 1.5f))
+                using (Pen ring = new Pen(FluentColors.Outline, 1.5f))
                 {
                     e.Graphics.DrawEllipse(ring, 1, 1, Width - 4, Height - 4);
                 }
@@ -950,7 +928,7 @@ namespace MouseTrail
                     int cy = Height / 2;
                     e.Graphics.FillEllipse(check, cx - 4, cy - 4, 8, 8);
                 }
-                using (Pen checkPen = new Pen(MaterialColors.Primary, 1.6f))
+                using (Pen checkPen = new Pen(FluentColors.Primary, 1.6f))
                 {
                     int cx = Width / 2;
                     int cy = Height / 2;
@@ -1004,10 +982,10 @@ namespace MouseTrail
             Rectangle rect = new Rectangle(2, 2, Width - 5, Height - 5);
             if (Selected || _hover)
             {
-                using (GraphicsPath path = MaterialDraw.RoundRect(rect, (int)(4 * UiScale)))
+                using (GraphicsPath path = FluentDraw.RoundRect(rect, (int)(4 * UiScale)))
                 using (SolidBrush brush = new SolidBrush(Selected
                     ? Color.FromArgb(255, 255, 255)
-                    : MaterialColors.SubtleHover))
+                    : FluentColors.SubtleHover))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
@@ -1017,19 +995,19 @@ namespace MouseTrail
             {
                 Rectangle accent = new Rectangle((int)(2 * UiScale), (Height - (int)(18 * UiScale)) / 2,
                     Math.Max(2, (int)(3 * UiScale)), (int)(18 * UiScale));
-                using (GraphicsPath path = MaterialDraw.RoundRect(accent, Math.Max(1, (int)(1.5f * UiScale))))
-                using (SolidBrush brush = new SolidBrush(MaterialColors.Accent))
+                using (GraphicsPath path = FluentDraw.RoundRect(accent, Math.Max(1, (int)(1.5f * UiScale))))
+                using (SolidBrush brush = new SolidBrush(FluentColors.Accent))
                 {
                     e.Graphics.FillPath(brush, path);
                 }
             }
 
-            Color iconColor = Selected ? MaterialColors.Accent : MaterialColors.OnSurfaceVariant;
-            Color textColor = MaterialColors.OnSurface;
+            Color iconColor = Selected ? FluentColors.Accent : FluentColors.OnSurfaceVariant;
+            Color textColor = FluentColors.OnSurface;
             int iconSize = (int)(22 * UiScale);
             int iconX = Collapsed ? (Width - iconSize) / 2 : (int)(14 * UiScale);
             Rectangle iconRect = new Rectangle(iconX, (Height - iconSize) / 2, iconSize, iconSize);
-            MaterialIcons.Draw(e.Graphics, iconRect, Icon, iconColor);
+            FluentIcons.Draw(e.Graphics, iconRect, Icon, iconColor);
 
             if (!Collapsed)
             {
@@ -1105,7 +1083,7 @@ namespace MouseTrail
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Color parentColor = Parent != null ? Parent.BackColor : MaterialColors.Surface;
+            Color parentColor = Parent != null ? Parent.BackColor : FluentColors.Surface;
             using (SolidBrush back = new SolidBrush(parentColor))
             {
                 e.Graphics.FillRectangle(back, ClientRectangle);
@@ -1114,8 +1092,8 @@ namespace MouseTrail
             if (_hover)
             {
                 Color fill = Icon == WindowButtonIcon.Close
-                    ? MaterialColors.Error
-                    : MaterialColors.SubtleHover;
+                    ? FluentColors.Error
+                    : FluentColors.SubtleHover;
                 using (SolidBrush brush = new SolidBrush(fill))
                 {
                     e.Graphics.FillRectangle(brush, ClientRectangle);
@@ -1124,7 +1102,7 @@ namespace MouseTrail
 
             Color color = _hover && Icon == WindowButtonIcon.Close
                 ? Color.White
-                : MaterialColors.OnSurface;
+                : FluentColors.OnSurface;
             if (GlyphFamily != null)
             {
                 string glyph = Icon == WindowButtonIcon.Minimize ? "\uE921"
@@ -1169,7 +1147,7 @@ namespace MouseTrail
 
         protected override void OnPaintBackground(PaintEventArgs pevent)
         {
-            Color parentColor = Parent != null ? Parent.BackColor : MaterialColors.Surface;
+            Color parentColor = Parent != null ? Parent.BackColor : FluentColors.Surface;
             using (SolidBrush brush = new SolidBrush(parentColor))
             {
                 pevent.Graphics.FillRectangle(brush, ClientRectangle);
@@ -1223,7 +1201,7 @@ namespace MouseTrail
             Point apex = new Point(Width / 2, pad);
             Point left = new Point(pad, Height - pad);
             Point right = new Point(Width - pad, Height - pad);
-            Color fill = _hover ? MaterialColors.ErrorContainer : bg;
+            Color fill = _hover ? FluentColors.ErrorContainer : bg;
             using (GraphicsPath path = new GraphicsPath())
             {
                 path.AddPolygon(new Point[] { apex, right, left });
@@ -1231,7 +1209,7 @@ namespace MouseTrail
                 {
                     e.Graphics.FillPath(b, path);
                 }
-                using (Pen pen = new Pen(MaterialColors.Error, Math.Max(1.2f, 1.3f * UiScale)))
+                using (Pen pen = new Pen(FluentColors.Error, Math.Max(1.2f, 1.3f * UiScale)))
                 {
                     pen.LineJoin = LineJoin.Round;
                     e.Graphics.DrawPath(pen, path);
@@ -1239,13 +1217,13 @@ namespace MouseTrail
             }
 
             int cx = Width / 2;
-            using (Pen pen = new Pen(MaterialColors.Error, Math.Max(1.4f, 1.5f * UiScale)))
+            using (Pen pen = new Pen(FluentColors.Error, Math.Max(1.4f, 1.5f * UiScale)))
             {
                 pen.StartCap = LineCap.Round;
                 pen.EndCap = LineCap.Round;
                 e.Graphics.DrawLine(pen, cx, (int)(Height * 0.38f), cx, (int)(Height * 0.62f));
             }
-            using (SolidBrush dot = new SolidBrush(MaterialColors.Error))
+            using (SolidBrush dot = new SolidBrush(FluentColors.Error))
             {
                 int size = Math.Max(2, (int)(2.4f * UiScale));
                 e.Graphics.FillEllipse(dot, cx - size / 2, (int)(Height * 0.74f) - size / 2, size, size);

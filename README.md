@@ -10,6 +10,10 @@
 
 ![预览](preview.png)
 
+![Fluent 主界面](docs/screenshot-appearance.png)
+
+![安装器](docs/screenshot-installer.png)
+
 ## 下载 / 快速开始
 
 ### 安装版（推荐）
@@ -27,7 +31,7 @@
 
 ### 便携版
 
-下载 `cursor-comet.exe`，双击运行，不会写入安装目录；配置文件仍然在 `%APPDATA%\MouseTrail`。
+下载 `cursor-comet.exe`，双击运行，不会写入安装目录；配置文件仍然在 `%APPDATA%\MouseTrail`（历史命名）。
 
 需要 Windows 10 / 11，系统自带 .NET Framework 4.8。exe 未签名，SmartScreen 可能提示，点“更多信息 → 仍要运行”即可。也可以克隆仓库后运行 `build.ps1` 自行编译。
 
@@ -42,7 +46,7 @@
 托盘菜单只有四项：
 
 - **鼠标拖尾**：标题；
-- **打开主界面**：打开 Fluent Design 设置窗口；
+- **打开主界面**：打开 Fluent 风格设置窗口；
 - **启用鼠标拖尾**：勾选/取消勾选，控制特效；
 - **退出**：关闭程序。
 
@@ -50,18 +54,18 @@
 
 ## 特性
 
-- **Fluent Design 主界面**：托盘菜单“打开主界面”或双击托盘图标，左侧分区导航、右侧卡片式设置，可自由拉伸
+- **Fluent Design 风格主界面（浅色）**：托盘菜单“打开主界面”或双击托盘图标，左侧分区导航、右侧卡片式设置，可自由拉伸
 - **中英文双语**：主界面、安装器、卸载器都可以切换语言
 - 便携版是单文件 exe（约 100 KB）；安装版是一个约 190 KB 的安装器，内部已包含主程序和独立的 `uninstall.exe`
 - 不需要安装 Python、Node 或 .NET SDK，使用 Windows 自带的 .NET Framework 4.8
 - 逐像素透明 + 鼠标穿透（`WS_EX_LAYERED | WS_EX_TRANSPARENT`），正常点击、拖拽、输入不受影响
 - 覆盖整个屏幕的透明窗口，轨迹按**固定时间**淡出：高速移动时拖尾自然变长，不会被窗口裁剪或断尾
-- 支持高 DPI 缩放，拖尾粗细会按系统 DPI 自动换算
+- 支持主屏高 DPI；混合 DPI 多屏下覆盖层按主屏 DPI 缩放，可能不一致
 - 配置自动保存，下次启动沿用
 
 ## 配置文件
 
-位置：`%APPDATA%\MouseTrail\config.ini`
+位置：`%APPDATA%\MouseTrail\config.ini`（历史命名，后续版本计划迁移到 `CursorComet`）
 
 ```ini
 # 样式 / Style: comet / rainbow / sparks / minimal
@@ -145,6 +149,8 @@ lang=auto
 
 并嵌入 `assets\app.ico` 和 `assets\app.manifest`。
 
+版本号唯一来源是根目录的 `version.txt`；`build.ps1` 会据此生成 `src\VersionInfo.cs` 和 `installer\VersionInfo.cs`，这两个文件不要手改。
+
 改图标后可以重新生成多尺寸 ico：
 
 ```powershell
@@ -170,7 +176,7 @@ cursor-comet/
 │  ├─ Palette.cs           # 颜色 / HSV
 │  ├─ L10n.cs              # 中英文字符串表
 │  ├─ MainForm.cs          # Fluent Design 主设置窗口
-│  ├─ MaterialUI.cs        # Fluent 控件和配色
+│  ├─ FluentUI.cs          # Fluent 控件和配色
 │  ├─ IconFactory.cs       # 运行时绘制图标
 │  ├─ AutoStart.cs         # 开机启动
 │  └─ Native.cs            # Win32 声明
@@ -181,8 +187,10 @@ cursor-comet/
 ├─ assets/
 │  ├─ app.ico
 │  └─ app.manifest
+├─ docs/                   # README 截图
 ├─ .github/workflows/build.yml   # 打 tag 自动编译并发布 Release
 ├─ tools/make-icon.ps1
+├─ version.txt             # 版本号唯一来源
 ├─ build.ps1
 ├─ preview.png
 ├─ README.en.md
@@ -230,6 +238,20 @@ cursor-comet/
 
 **想改成别的颜色 / 曲线？**
 改 `src\Palette.cs` 里的颜色，或调 `src\TrailRenderer.cs` 顶部的 `StampSpacing`、`MaxRadius`，然后重新运行 `build.ps1`。
+
+## 版本策略
+
+- 版本号唯一来源是根目录的 `version.txt`，`build.ps1` 自动生成程序与安装器版本，避免多处手改。
+- 只在大里程碑发版，不再为单个修复或外观微调连续发版。当前公开版本为 **1.8.0**，下一个有意义的里程碑是 **2.0.0**（安装器简化、渲染架构和工程化）。
+- 1.x 的旧发布保留作为开发历史；之后不再把版本号当进度条。
+
+## 已知限制
+
+- 界面是自定义绘制的 Fluent 浅色风格，不是系统 Mica，也没有深色模式；部分系统控件（滚动条、组合框）仍是 WinForms 原生样式。
+- 全屏透明覆盖层基于 GDI+，高速移动、4K 和多屏时 CPU 开销较高；这是 2.0.0 计划替换的部分。
+- 主界面按主屏 DPI 手动缩放；混合 DPI 多屏下覆盖层只按主屏 DPI，副屏可能不一致。
+- 安装器是自绘向导，固定 576×302，未使用 Inno Setup；后续计划简化。
+- 目前没有自动化测试、代码签名和独立 `.sln`，CI 只负责构建和发布。
 
 ## 更新日志
 

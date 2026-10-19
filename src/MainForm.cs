@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace MouseTrail
 {
-    /// <summary>Material You 风格的主设置窗口：左侧分区导航，右侧卡片内容。</summary>
+    /// <summary>Fluent Design 风格的主设置窗口：左侧分区导航，右侧卡片内容。</summary>
     internal sealed class MainForm : Form
     {
         private enum Section
@@ -22,7 +22,7 @@ namespace MouseTrail
         }
 
         private const string RepoUrl = "https://github.com/cwslz/cursor-comet";
-        private const string AppVersion = "1.8.0";
+        private const string AppVersion = VersionInfo.Version;
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int WM_NCHITTEST = 0x84;
         private const int HTCAPTION = 2;
@@ -55,8 +55,8 @@ namespace MouseTrail
             _changed = changed;
 
             Text = L10n.T("鼠标拖尾 · 设置", "Cursor Comet · Settings");
-            BackColor = MaterialColors.Surface;
-            ForeColor = MaterialColors.OnSurface;
+            BackColor = FluentColors.Surface;
+            ForeColor = FluentColors.OnSurface;
             Font = FluentFonts.Create(10f, FontStyle.Regular);
             AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.None;
@@ -75,9 +75,13 @@ namespace MouseTrail
             {
                 _dpiScale = 1f;
             }
-            ClientSize = new Size((int)(1080 * _dpiScale), (int)(700 * _dpiScale));
-            MinimumSize = new Size((int)(760 * _dpiScale), (int)(520 * _dpiScale));
             Rectangle work = Screen.PrimaryScreen.WorkingArea;
+            int minWidth = Math.Min((int)(760 * _dpiScale),
+                Math.Max((int)(480 * _dpiScale), work.Width - (int)(48 * _dpiScale)));
+            int minHeight = Math.Min((int)(520 * _dpiScale),
+                Math.Max((int)(360 * _dpiScale), work.Height - (int)(48 * _dpiScale)));
+            MinimumSize = new Size(minWidth, minHeight);
+            ClientSize = new Size((int)(1080 * _dpiScale), (int)(700 * _dpiScale));
             int fitWidth = Math.Min(ClientSize.Width, work.Width - (int)(32 * _dpiScale));
             int fitHeight = Math.Min(ClientSize.Height, work.Height - (int)(32 * _dpiScale));
             ClientSize = new Size(Math.Max(MinimumSize.Width, fitWidth),
@@ -181,7 +185,6 @@ namespace MouseTrail
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            FluentBackdrop.Apply(Handle);
             try
             {
                 int preference = 2;
@@ -251,7 +254,7 @@ namespace MouseTrail
             _root.RowCount = 1;
             _root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 236f * _dpiScale));
             _root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            _root.BackColor = MaterialColors.Surface;
+            _root.BackColor = FluentColors.Surface;
             Controls.Add(_root);
 
             _sidebar = new TableLayoutPanel();
@@ -263,7 +266,7 @@ namespace MouseTrail
             _sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             _sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _sidebar.BackColor = MaterialColors.Surface;
+            _sidebar.BackColor = FluentColors.Surface;
             _sidebar.Padding = new Padding(
                 (int)(12 * _dpiScale), (int)(16 * _dpiScale),
                 (int)(12 * _dpiScale), (int)(12 * _dpiScale));
@@ -273,7 +276,7 @@ namespace MouseTrail
             BuildNavList();
             Panel spacer = new Panel();
             spacer.Dock = DockStyle.Fill;
-            spacer.BackColor = MaterialColors.Surface;
+            spacer.BackColor = FluentColors.Surface;
             _sidebar.Controls.Add(spacer, 0, 2);
             BuildBottomNav();
 
@@ -284,7 +287,7 @@ namespace MouseTrail
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-            content.BackColor = MaterialColors.Surface;
+            content.BackColor = FluentColors.Surface;
             _root.Controls.Add(content, 1, 0);
 
             TableLayoutPanel header = new TableLayoutPanel();
@@ -299,21 +302,21 @@ namespace MouseTrail
             header.Padding = new Padding(
                 (int)(32 * _dpiScale), (int)(20 * _dpiScale),
                 (int)(6 * _dpiScale), (int)(8 * _dpiScale));
-            header.BackColor = MaterialColors.Surface;
+            header.BackColor = FluentColors.Surface;
 
             _sectionTitle = new Label();
             _sectionTitle.AutoSize = true;
             _sectionTitle.Font = new Font(Font.FontFamily, 26f, FontStyle.Bold);
-            _sectionTitle.ForeColor = MaterialColors.OnSurface;
-            _sectionTitle.BackColor = MaterialColors.Surface;
+            _sectionTitle.ForeColor = FluentColors.OnSurface;
+            _sectionTitle.BackColor = FluentColors.Surface;
             _sectionTitle.Margin = new Padding(0, (int)(6 * _dpiScale), 0, 2);
             header.Controls.Add(_sectionTitle, 0, 0);
 
             _sectionSubtitle = new Label();
             _sectionSubtitle.AutoSize = true;
             _sectionSubtitle.Font = new Font(Font.FontFamily, 10f);
-            _sectionSubtitle.ForeColor = MaterialColors.OnSurfaceVariant;
-            _sectionSubtitle.BackColor = MaterialColors.Surface;
+            _sectionSubtitle.ForeColor = FluentColors.OnSurfaceVariant;
+            _sectionSubtitle.BackColor = FluentColors.Surface;
             _sectionSubtitle.Margin = new Padding(0, 0, 0, 0);
             header.Controls.Add(_sectionSubtitle, 0, 1);
 
@@ -321,7 +324,7 @@ namespace MouseTrail
             windowControls.AutoSize = true;
             windowControls.WrapContents = false;
             windowControls.FlowDirection = FlowDirection.RightToLeft;
-            windowControls.BackColor = MaterialColors.Surface;
+            windowControls.BackColor = FluentColors.Surface;
             windowControls.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             windowControls.Margin = new Padding(0, 0, 0, 0);
 
@@ -349,7 +352,7 @@ namespace MouseTrail
             _cards.AutoScroll = true;
             _cards.FlowDirection = FlowDirection.TopDown;
             _cards.WrapContents = false;
-            _cards.BackColor = MaterialColors.Surface;
+            _cards.BackColor = FluentColors.Surface;
             _cards.Padding = new Padding(
                 (int)(32 * _dpiScale), (int)(8 * _dpiScale),
                 (int)(32 * _dpiScale), (int)(28 * _dpiScale));
@@ -367,7 +370,7 @@ namespace MouseTrail
             header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             header.Margin = new Padding(0, 0, 0, (int)(14 * _dpiScale));
-            header.BackColor = MaterialColors.Surface;
+            header.BackColor = FluentColors.Surface;
 
             try
             {
@@ -399,16 +402,16 @@ namespace MouseTrail
             _appTitle = new Label();
             _appTitle.AutoSize = true;
             _appTitle.Font = new Font(Font.FontFamily, 14f, FontStyle.Bold);
-            _appTitle.ForeColor = MaterialColors.OnSurface;
-            _appTitle.BackColor = MaterialColors.Surface;
+            _appTitle.ForeColor = FluentColors.OnSurface;
+            _appTitle.BackColor = FluentColors.Surface;
             _appTitle.Margin = new Padding(0, 0, 0, 0);
             text.Controls.Add(_appTitle, 0, 0);
 
             _appSubtitle = new Label();
             _appSubtitle.AutoSize = true;
             _appSubtitle.Font = new Font(Font.FontFamily, 9f);
-            _appSubtitle.ForeColor = MaterialColors.OnSurfaceVariant;
-            _appSubtitle.BackColor = MaterialColors.Surface;
+            _appSubtitle.ForeColor = FluentColors.OnSurfaceVariant;
+            _appSubtitle.BackColor = FluentColors.Surface;
             _appSubtitle.Margin = new Padding(0, 0, 0, 0);
             text.Controls.Add(_appSubtitle, 0, 1);
 
@@ -429,7 +432,7 @@ namespace MouseTrail
             _navList.ColumnCount = 1;
             _navList.RowCount = 0;
             _navList.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            _navList.BackColor = MaterialColors.Surface;
+            _navList.BackColor = FluentColors.Surface;
             _navList.Margin = new Padding(0, 0, 0, 0);
             _sidebar.Controls.Add(_navList, 0, 1);
 
@@ -448,7 +451,7 @@ namespace MouseTrail
             _bottomNav.ColumnCount = 1;
             _bottomNav.RowCount = 0;
             _bottomNav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            _bottomNav.BackColor = MaterialColors.Surface;
+            _bottomNav.BackColor = FluentColors.Surface;
             _bottomNav.Margin = new Padding(0, 10, 0, 0);
             _sidebar.Controls.Add(_bottomNav, 0, 3);
 
@@ -569,8 +572,8 @@ namespace MouseTrail
         {
             RoundedPanel card = new RoundedPanel();
             card.Radius = (int)(8 * _dpiScale);
-            card.FillColor = MaterialColors.Card;
-            card.BorderColor = MaterialColors.Stroke;
+            card.FillColor = FluentColors.Card;
+            card.BorderColor = FluentColors.Stroke;
             card.BorderWidth = 1f;
             card.Padding = new Padding(
                 (int)(18 * _dpiScale), (int)(14 * _dpiScale),
@@ -591,14 +594,14 @@ namespace MouseTrail
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.BackColor = MaterialColors.SurfaceContainer;
+            layout.BackColor = FluentColors.SurfaceContainer;
 
             Label titleLabel = new Label();
             titleLabel.Text = title;
             titleLabel.AutoSize = true;
             titleLabel.Font = new Font(Font.FontFamily, 13f, FontStyle.Bold);
-            titleLabel.ForeColor = MaterialColors.OnSurface;
-            titleLabel.BackColor = MaterialColors.Card;
+            titleLabel.ForeColor = FluentColors.OnSurface;
+            titleLabel.BackColor = FluentColors.Card;
             titleLabel.Margin = new Padding(0, 0, 0, 2);
             layout.Controls.Add(titleLabel, 0, 0);
 
@@ -614,8 +617,8 @@ namespace MouseTrail
             subtitleLabel.Text = subtitle;
             subtitleLabel.AutoSize = true;
             subtitleLabel.Font = new Font(Font.FontFamily, 9f);
-            subtitleLabel.ForeColor = MaterialColors.OnSurfaceVariant;
-            subtitleLabel.BackColor = MaterialColors.Card;
+            subtitleLabel.ForeColor = FluentColors.OnSurfaceVariant;
+            subtitleLabel.BackColor = FluentColors.Card;
             subtitleLabel.Margin = new Padding(0, 0, 0, 0);
             layout.Controls.Add(subtitleLabel, 0, 1);
 
@@ -623,7 +626,7 @@ namespace MouseTrail
             content.Margin = new Padding(0, 8, 0, 0);
             if (content.BackColor == Color.Empty || content.BackColor == Color.Transparent)
             {
-                content.BackColor = MaterialColors.SurfaceContainer;
+                content.BackColor = FluentColors.SurfaceContainer;
             }
             layout.Controls.Add(content, 0, 2);
             layout.SetColumnSpan(content, 2);
@@ -639,7 +642,7 @@ namespace MouseTrail
             dot.UiScale = _dpiScale;
             dot.Width = (int)(18 * _dpiScale);
             dot.Height = (int)(18 * _dpiScale);
-            dot.BackColor = MaterialColors.Card;
+            dot.BackColor = FluentColors.Card;
             dot.Click += delegate { _toolTip.Show(note, dot, 10000); };
             _toolTip.SetToolTip(dot, note);
             return dot;
@@ -647,7 +650,7 @@ namespace MouseTrail
 
         private void BuildAppearanceCards()
         {
-            MaterialToggle enable = new MaterialToggle();
+            FluentToggle enable = new FluentToggle();
             enable.Text = L10n.T("启用鼠标拖尾", "Enable mouse trail");
             enable.Checked = _cfg.Enabled;
             enable.Width = 320;
@@ -671,7 +674,7 @@ namespace MouseTrail
             styles.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             styles.Dock = DockStyle.Top;
             styles.WrapContents = true;
-            styles.BackColor = MaterialColors.SurfaceContainer;
+            styles.BackColor = FluentColors.SurfaceContainer;
 
             AddStyleCard(styles, "comet", L10n.T("流光", "Comet"),
                 L10n.T("带光晕的连续拖尾", "Continuous glowing trail"));
@@ -695,7 +698,7 @@ namespace MouseTrail
             content.ColumnCount = 1;
             content.RowCount = 0;
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            content.BackColor = MaterialColors.SurfaceContainer;
+            content.BackColor = FluentColors.SurfaceContainer;
 
             AddParamRow(content, L10n.T("粗细", "Thickness"), 0.5, 2.0, 0.05, _cfg.Scale,
                 delegate(double v) { return v.ToString("0.00") + "×"; },
@@ -719,7 +722,7 @@ namespace MouseTrail
             content.ColumnCount = 1;
             content.RowCount = 0;
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            content.BackColor = MaterialColors.SurfaceContainer;
+            content.BackColor = FluentColors.SurfaceContainer;
 
             switch (_cfg.Style)
             {
@@ -730,15 +733,15 @@ namespace MouseTrail
                     moved.Text = L10n.T("光晕已移至「光圈」选项；流光的光晕会跟随拖尾，拖尾淡出时一起消失。",
                         "The glow has moved to the Halo page; the comet glow follows the trail and fades with it.");
                     moved.Font = new Font(Font.FontFamily, 9f);
-                    moved.ForeColor = MaterialColors.OnSurfaceVariant;
-                    moved.BackColor = MaterialColors.SurfaceContainer;
+                    moved.ForeColor = FluentColors.OnSurfaceVariant;
+                    moved.BackColor = FluentColors.SurfaceContainer;
                     moved.Margin = new Padding(0, 0, 0, (int)(6 * _dpiScale));
                     AddContentRow(content, moved);
 
-                    MaterialButton openHalo = new MaterialButton();
+                    FluentButton openHalo = new FluentButton();
                     openHalo.Text = L10n.T("前往光圈", "Open Halo");
-                    openHalo.FillColor = MaterialColors.PrimaryContainer;
-                    openHalo.TextColor = MaterialColors.OnPrimaryContainer;
+                    openHalo.FillColor = FluentColors.PrimaryContainer;
+                    openHalo.TextColor = FluentColors.OnPrimaryContainer;
                     openHalo.Click += delegate { SelectSection(Section.Halo); };
                     AddContentRow(content, openHalo);
                     break;
@@ -807,20 +810,20 @@ namespace MouseTrail
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             row.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            row.BackColor = MaterialColors.SurfaceContainer;
+            row.BackColor = FluentColors.SurfaceContainer;
             row.Margin = new Padding(0, 0, 0, (int)(2 * _dpiScale));
 
             Label name = new Label();
             name.AutoSize = true;
             name.Text = label;
             name.Font = new Font(Font.FontFamily, 10f);
-            name.ForeColor = MaterialColors.OnSurfaceVariant;
-            name.BackColor = MaterialColors.Card;
+            name.ForeColor = FluentColors.OnSurfaceVariant;
+            name.BackColor = FluentColors.Card;
             name.Anchor = AnchorStyles.Left;
             name.Margin = new Padding(0, (int)(10 * _dpiScale), (int)(12 * _dpiScale), 0);
             row.Controls.Add(name, 0, 0);
 
-            MaterialSlider slider = new MaterialSlider();
+            FluentSlider slider = new FluentSlider();
             slider.Minimum = min;
             slider.Maximum = max;
             slider.Step = step;
@@ -835,8 +838,8 @@ namespace MouseTrail
             val.AutoSize = true;
             val.Text = format(value);
             val.Font = new Font(Font.FontFamily, 11f, FontStyle.Bold);
-            val.ForeColor = MaterialColors.Primary;
-            val.BackColor = MaterialColors.Card;
+            val.ForeColor = FluentColors.Primary;
+            val.BackColor = FluentColors.Card;
             val.Anchor = AnchorStyles.Right;
             val.TextAlign = ContentAlignment.MiddleRight;
             val.Margin = new Padding(0, (int)(7 * _dpiScale), 0, 0);
@@ -883,7 +886,7 @@ namespace MouseTrail
             {
                 InfoDot dot = MakeInfoDot(L10n.T("本软件的彩虹是随着鼠标的运动而改变的，并非自行跳动。",
                     "The rainbow follows mouse movement; it does not animate by itself."));
-                dot.BackColor = card.Selected ? MaterialColors.SelectedTint : MaterialColors.Card;
+                dot.BackColor = card.Selected ? FluentColors.SelectedTint : FluentColors.Card;
                 dot.Anchor = AnchorStyles.Top | AnchorStyles.Right;
                 dot.Location = new Point(card.Width - dot.Width - (int)(8 * _dpiScale),
                     (int)(8 * _dpiScale));
@@ -901,25 +904,25 @@ namespace MouseTrail
             content.ColumnCount = 1;
             content.RowCount = 0;
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            content.BackColor = MaterialColors.SurfaceContainer;
+            content.BackColor = FluentColors.SurfaceContainer;
 
             Label note = new Label();
             note.AutoSize = true;
             note.Text = L10n.T("彩虹模式使用 HSV 循环，颜色色板不参与渲染。请到“外观 → 样式参数 → 彩虹”中调整流速、饱和度和色相偏移。",
                 "Rainbow mode uses an HSV cycle; the color palette is not used. Adjust speed, saturation and hue offset in Appearance → Style parameters → Rainbow.");
             note.MaximumSize = new Size((int)(760 * _dpiScale), 0);
-            note.ForeColor = MaterialColors.OnSurfaceVariant;
-            note.BackColor = MaterialColors.SurfaceContainer;
+            note.ForeColor = FluentColors.OnSurfaceVariant;
+            note.BackColor = FluentColors.SurfaceContainer;
             note.Font = new Font(Font.FontFamily, 9f);
             note.Margin = new Padding(0, 0, 0, (int)(10 * _dpiScale));
             content.RowCount++;
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.Controls.Add(note, 0, content.RowCount - 1);
 
-            MaterialButton go = new MaterialButton();
+            FluentButton go = new FluentButton();
             go.Text = L10n.T("前往外观", "Go to Appearance");
-            go.FillColor = MaterialColors.Primary;
-            go.TextColor = MaterialColors.OnPrimary;
+            go.FillColor = FluentColors.Primary;
+            go.TextColor = FluentColors.OnPrimary;
             go.Click += delegate { SelectSection(Section.Appearance); };
             content.RowCount++;
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -941,7 +944,7 @@ namespace MouseTrail
             flow.Height = (int)((46 + 10) * _dpiScale);
             flow.Dock = DockStyle.Top;
             flow.WrapContents = true;
-            flow.BackColor = MaterialColors.SurfaceContainer;
+            flow.BackColor = FluentColors.SurfaceContainer;
 
             for (int i = 0; i < Palette.Definitions.Length; i++)
             {
@@ -972,8 +975,8 @@ namespace MouseTrail
             Label current = new Label();
             current.AutoSize = true;
             current.Text = L10n.T("当前颜色：", "Current color: ") + Palette.Display(_cfg.ColorName);
-            current.ForeColor = MaterialColors.OnSurfaceVariant;
-            current.BackColor = MaterialColors.SurfaceContainer;
+            current.ForeColor = FluentColors.OnSurfaceVariant;
+            current.BackColor = FluentColors.SurfaceContainer;
             current.Font = new Font(Font.FontFamily, 9f);
             current.Margin = new Padding(0, 8, 0, 0);
 
@@ -985,7 +988,7 @@ namespace MouseTrail
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            content.BackColor = MaterialColors.SurfaceContainer;
+            content.BackColor = FluentColors.SurfaceContainer;
             content.Controls.Add(flow, 0, 0);
             content.Controls.Add(current, 0, 1);
 
@@ -1001,9 +1004,9 @@ namespace MouseTrail
             glowContent.ColumnCount = 1;
             glowContent.RowCount = 0;
             glowContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            glowContent.BackColor = MaterialColors.SurfaceContainer;
+            glowContent.BackColor = FluentColors.SurfaceContainer;
 
-            MaterialToggle glowToggle = new MaterialToggle();
+            FluentToggle glowToggle = new FluentToggle();
             glowToggle.Text = L10n.T("显示光晕", "Show glow");
             glowToggle.Checked = _cfg.GlowEnabled;
             glowToggle.Width = (int)(360 * _dpiScale);
@@ -1041,9 +1044,9 @@ namespace MouseTrail
             haloContent.ColumnCount = 1;
             haloContent.RowCount = 0;
             haloContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            haloContent.BackColor = MaterialColors.SurfaceContainer;
+            haloContent.BackColor = FluentColors.SurfaceContainer;
 
-            MaterialToggle haloToggle = new MaterialToggle();
+            FluentToggle haloToggle = new FluentToggle();
             haloToggle.Text = L10n.T("显示光圈", "Show halo");
             haloToggle.Checked = _cfg.HaloEnabled;
             haloToggle.Width = (int)(360 * _dpiScale);
@@ -1090,15 +1093,15 @@ namespace MouseTrail
             row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             row.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            row.BackColor = MaterialColors.SurfaceContainer;
+            row.BackColor = FluentColors.SurfaceContainer;
             row.Margin = new Padding(0, (int)(2 * _dpiScale), 0, (int)(2 * _dpiScale));
 
             Label name = new Label();
             name.AutoSize = true;
             name.Text = L10n.T("颜色", "Color");
             name.Font = new Font(Font.FontFamily, 10f);
-            name.ForeColor = MaterialColors.OnSurfaceVariant;
-            name.BackColor = MaterialColors.Card;
+            name.ForeColor = FluentColors.OnSurfaceVariant;
+            name.BackColor = FluentColors.Card;
             name.Anchor = AnchorStyles.Left;
             name.Margin = new Padding(0, (int)(10 * _dpiScale), (int)(12 * _dpiScale), 0);
             row.Controls.Add(name, 0, 0);
@@ -1106,16 +1109,16 @@ namespace MouseTrail
             FlowLayoutPanel flow = new FlowLayoutPanel();
             flow.AutoSize = true;
             flow.WrapContents = false;
-            flow.BackColor = MaterialColors.SurfaceContainer;
+            flow.BackColor = FluentColors.SurfaceContainer;
             flow.Margin = new Padding(0, (int)(4 * _dpiScale), 0, 0);
 
             bool auto = string.Equals(current, "auto", StringComparison.Ordinal);
-            MaterialButton autoButton = new MaterialButton();
+            FluentButton autoButton = new FluentButton();
             autoButton.Text = L10n.T("跟随", "Auto");
             autoButton.Font = new Font(Font.FontFamily, 9f);
-            autoButton.FillColor = auto ? MaterialColors.PrimaryContainer : MaterialColors.SurfaceContainerHigh;
-            autoButton.TextColor = auto ? MaterialColors.OnPrimaryContainer : MaterialColors.OnSurfaceVariant;
-            autoButton.BorderColor = MaterialColors.OutlineVariant;
+            autoButton.FillColor = auto ? FluentColors.PrimaryContainer : FluentColors.SurfaceContainerHigh;
+            autoButton.TextColor = auto ? FluentColors.OnPrimaryContainer : FluentColors.OnSurfaceVariant;
+            autoButton.BorderColor = FluentColors.OutlineVariant;
             autoButton.Height = (int)(30 * _dpiScale);
             autoButton.Margin = new Padding(0, 0, (int)(8 * _dpiScale), (int)(6 * _dpiScale));
             autoButton.Click += delegate
@@ -1178,9 +1181,9 @@ namespace MouseTrail
             toggles.Dock = DockStyle.Top;
             toggles.FlowDirection = FlowDirection.TopDown;
             toggles.WrapContents = false;
-            toggles.BackColor = MaterialColors.SurfaceContainer;
+            toggles.BackColor = FluentColors.SurfaceContainer;
 
-            MaterialToggle startup = new MaterialToggle();
+            FluentToggle startup = new FluentToggle();
             startup.Text = L10n.T("开机自动启动", "Start with Windows");
             startup.Checked = AutoStart.IsEnabled();
             startup.Width = 360;
@@ -1197,7 +1200,7 @@ namespace MouseTrail
             };
             toggles.Controls.Add(startup);
 
-            MaterialToggle tips = new MaterialToggle();
+            FluentToggle tips = new FluentToggle();
             tips.Text = L10n.T("首次启动显示提示", "Show a tip on first launch");
             tips.Checked = _cfg.ShowTip;
             tips.Width = 360;
@@ -1223,13 +1226,13 @@ namespace MouseTrail
             actions.AutoSize = true;
             actions.Dock = DockStyle.Top;
             actions.WrapContents = true;
-            actions.BackColor = MaterialColors.SurfaceContainer;
+            actions.BackColor = FluentColors.SurfaceContainer;
 
-            MaterialButton reset = new MaterialButton();
+            FluentButton reset = new FluentButton();
             reset.Text = L10n.T("恢复默认设置", "Reset to defaults");
-            reset.FillColor = MaterialColors.SecondaryContainer;
-            reset.TextColor = MaterialColors.OnSecondaryContainer;
-            reset.BorderColor = MaterialColors.Stroke;
+            reset.FillColor = FluentColors.SecondaryContainer;
+            reset.TextColor = FluentColors.OnSecondaryContainer;
+            reset.BorderColor = FluentColors.Stroke;
             reset.Click += delegate
             {
                 using (ConfirmDialog dialog = new ConfirmDialog(
@@ -1253,11 +1256,11 @@ namespace MouseTrail
             };
             actions.Controls.Add(reset);
 
-            MaterialButton folder = new MaterialButton();
+            FluentButton folder = new FluentButton();
             folder.Text = L10n.T("打开配置文件夹", "Open config folder");
-            folder.FillColor = MaterialColors.SurfaceContainerHigh;
-            folder.TextColor = MaterialColors.OnSurface;
-            folder.BorderColor = MaterialColors.Stroke;
+            folder.FillColor = FluentColors.SurfaceContainerHigh;
+            folder.TextColor = FluentColors.OnSurface;
+            folder.BorderColor = FluentColors.Stroke;
             folder.Margin = new Padding(8, 0, 0, 0);
             folder.Click += delegate
             {
@@ -1283,7 +1286,7 @@ namespace MouseTrail
             flow.Height = (int)((46 + 10) * _dpiScale);
             flow.Dock = DockStyle.Top;
             flow.WrapContents = true;
-            flow.BackColor = MaterialColors.SurfaceContainer;
+            flow.BackColor = FluentColors.SurfaceContainer;
 
             AddLanguageButton(flow, "auto", L10n.T("自动", "Auto"));
             AddLanguageButton(flow, "zh", "中文");
@@ -1292,8 +1295,8 @@ namespace MouseTrail
             Label note = new Label();
             note.AutoSize = true;
             note.Text = L10n.T("“自动”会跟随系统语言。", "“Auto” follows the system language.");
-            note.ForeColor = MaterialColors.OnSurfaceVariant;
-            note.BackColor = MaterialColors.SurfaceContainer;
+            note.ForeColor = FluentColors.OnSurfaceVariant;
+            note.BackColor = FluentColors.SurfaceContainer;
             note.Font = new Font(Font.FontFamily, 9f);
             note.Margin = new Padding(0, 10, 0, 0);
 
@@ -1305,7 +1308,7 @@ namespace MouseTrail
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            content.BackColor = MaterialColors.SurfaceContainer;
+            content.BackColor = FluentColors.SurfaceContainer;
             content.Controls.Add(flow, 0, 0);
             content.Controls.Add(note, 0, 1);
 
@@ -1316,11 +1319,11 @@ namespace MouseTrail
         private void AddLanguageButton(FlowLayoutPanel host, string value, string text)
         {
             bool selected = string.Equals(_cfg.Language, value, StringComparison.Ordinal);
-            MaterialButton button = new MaterialButton();
+            FluentButton button = new FluentButton();
             button.Text = text;
-            button.FillColor = selected ? MaterialColors.PrimaryContainer : MaterialColors.SurfaceContainerHigh;
-            button.TextColor = selected ? MaterialColors.OnPrimaryContainer : MaterialColors.OnSurface;
-            button.BorderColor = selected ? MaterialColors.Accent : MaterialColors.Stroke;
+            button.FillColor = selected ? FluentColors.PrimaryContainer : FluentColors.SurfaceContainerHigh;
+            button.TextColor = selected ? FluentColors.OnPrimaryContainer : FluentColors.OnSurface;
+            button.BorderColor = selected ? FluentColors.Accent : FluentColors.Stroke;
             button.Radius = 4;
             button.Margin = new Padding(0, 0, 8, 8);
             button.Click += delegate
@@ -1351,7 +1354,7 @@ namespace MouseTrail
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            content.BackColor = MaterialColors.SurfaceContainer;
+            content.BackColor = FluentColors.SurfaceContainer;
 
             try
             {
@@ -1374,8 +1377,8 @@ namespace MouseTrail
             name.AutoSize = true;
             name.Text = "Cursor Comet";
             name.Font = new Font(Font.FontFamily, 20f, FontStyle.Bold);
-            name.ForeColor = MaterialColors.OnSurface;
-            name.BackColor = MaterialColors.Card;
+            name.ForeColor = FluentColors.OnSurface;
+            name.BackColor = FluentColors.Card;
             name.Margin = new Padding(0, 0, 0, 2);
             content.Controls.Add(name, 1, 0);
 
@@ -1383,17 +1386,17 @@ namespace MouseTrail
             version.AutoSize = true;
             version.Text = "v" + AppVersion + " · GPL-3.0";
             version.Font = new Font(Font.FontFamily, 9.5f);
-            version.ForeColor = MaterialColors.OnSurfaceVariant;
-            version.BackColor = MaterialColors.Card;
+            version.ForeColor = FluentColors.OnSurfaceVariant;
+            version.BackColor = FluentColors.Card;
             content.Controls.Add(version, 1, 1);
 
             Label description = new Label();
             description.AutoSize = true;
             description.MaximumSize = new Size(620, 0);
-            description.Text = L10n.T("Windows 鼠标拖尾特效：全屏透明覆盖、四种样式、按时间淡出，支持高 DPI。",
-                "Windows cursor trail effect: full-screen transparent overlay, four styles, time-based fading and high-DPI support.");
-            description.ForeColor = MaterialColors.OnSurfaceVariant;
-            description.BackColor = MaterialColors.Card;
+            description.Text = L10n.T("Windows 鼠标拖尾特效：全屏透明覆盖、四种样式、按时间淡出，支持主屏高 DPI。",
+                "Windows cursor trail effect: full-screen transparent overlay, four styles, time-based fading and high-DPI support on the primary display.");
+            description.ForeColor = FluentColors.OnSurfaceVariant;
+            description.BackColor = FluentColors.Card;
             description.Margin = new Padding(0, 8, 0, 4);
             content.Controls.Add(description, 1, 2);
 
@@ -1401,27 +1404,10 @@ namespace MouseTrail
             config.AutoSize = true;
             config.MaximumSize = new Size(620, 0);
             config.Text = L10n.T("配置文件：", "Config file: ") + AppSettings.FilePath;
-            config.ForeColor = MaterialColors.OnSurfaceVariant;
+            config.ForeColor = FluentColors.OnSurfaceVariant;
             config.Font = new Font(Font.FontFamily, 9f);
-            config.BackColor = MaterialColors.SurfaceContainer;
+            config.BackColor = FluentColors.SurfaceContainer;
             content.Controls.Add(config, 1, 3);
-
-            Label star = new Label();
-            star.AutoSize = true;
-            star.MaximumSize = new Size((int)(760 * _dpiScale), 0);
-            star.Text = L10n.T("如果觉得好用，可以给个 Star 吗 ⭐️✨",
-                "If you find it useful, could you give it a Star? ⭐️✨");
-            star.Font = new Font(Font.FontFamily, 10f);
-            star.ForeColor = MaterialColors.Primary;
-            star.BackColor = MaterialColors.SurfaceContainer;
-            star.Cursor = Cursors.Hand;
-            star.Margin = new Padding(0, (int)(14 * _dpiScale), 0, 0);
-            star.Click += delegate { OpenRepo(); };
-            _toolTip.SetToolTip(star, L10n.T("打开 GitHub 仓库", "Open the GitHub repository"));
-            content.RowCount++;
-            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            content.Controls.Add(star, 0, content.RowCount - 1);
-            content.SetColumnSpan(star, 2);
 
             AddCard(L10n.T("关于 Cursor Comet", "About Cursor Comet"),
                 L10n.T("版本、许可证和配置位置。", "Version, license and config location."), content);
@@ -1438,14 +1424,14 @@ namespace MouseTrail
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            content.BackColor = MaterialColors.SurfaceContainer;
+            content.BackColor = FluentColors.SurfaceContainer;
 
             Label repo = new Label();
             repo.AutoSize = true;
             repo.Text = "github.com/cwslz/cursor-comet";
             repo.Font = new Font(Font.FontFamily, 14f, FontStyle.Bold);
-            repo.ForeColor = MaterialColors.OnSurface;
-            repo.BackColor = MaterialColors.Card;
+            repo.ForeColor = FluentColors.OnSurface;
+            repo.BackColor = FluentColors.Card;
             content.Controls.Add(repo, 0, 0);
 
             Label description = new Label();
@@ -1453,15 +1439,15 @@ namespace MouseTrail
             description.MaximumSize = new Size(620, 0);
             description.Text = L10n.T("源码、问题反馈和版本发布都在 GitHub 上。",
                 "Source code, issues and releases are on GitHub.");
-            description.ForeColor = MaterialColors.OnSurfaceVariant;
-            description.BackColor = MaterialColors.Card;
+            description.ForeColor = FluentColors.OnSurfaceVariant;
+            description.BackColor = FluentColors.Card;
             description.Margin = new Padding(0, 6, 0, 10);
             content.Controls.Add(description, 0, 1);
 
-            MaterialButton open = new MaterialButton();
+            FluentButton open = new FluentButton();
             open.Text = L10n.T("在浏览器中打开", "Open in browser");
-            open.FillColor = MaterialColors.Primary;
-            open.TextColor = MaterialColors.OnPrimary;
+            open.FillColor = FluentColors.Primary;
+            open.TextColor = FluentColors.OnPrimary;
             open.Click += delegate
             {
                 try
@@ -1510,7 +1496,6 @@ namespace MouseTrail
             {
             }
         }
-
         private void UpdateResponsive()
         {
             if (_root == null)

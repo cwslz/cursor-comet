@@ -55,7 +55,6 @@ namespace MouseTrail
                     false, EventResetMode.AutoReset, OpenEventName);
 
                 EnableDpiAwareness();
-                Native.timeBeginPeriod(1);
 
                 Application.ThreadException += delegate(object sender, ThreadExceptionEventArgs e)
                 {
@@ -105,7 +104,6 @@ namespace MouseTrail
                 }
                 finally
                 {
-                    Native.timeEndPeriod(1);
                     try
                     {
                         mutex.ReleaseMutex();

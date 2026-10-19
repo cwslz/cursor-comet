@@ -231,8 +231,10 @@ namespace MouseTrail
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                TryBackupCorruptConfig();
+                Program.Log(ex);
             }
 
             if (!hasLife && legacyLength > 0)
@@ -331,9 +333,29 @@ namespace MouseTrail
                 File.WriteAllText(tmp, sb.ToString(), new UTF8Encoding(false));
                 if (File.Exists(FilePath))
                 {
-                    File.Delete(FilePath);
+                    File.Replace(tmp, FilePath, FilePath + ".bak");
                 }
-                File.Move(tmp, FilePath);
+                else
+                {
+                    File.Move(tmp, FilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log(ex);
+            }
+        }
+
+        private static void TryBackupCorruptConfig()
+        {
+            try
+            {
+                if (!File.Exists(FilePath))
+                {
+                    return;
+                }
+                string backup = FilePath + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                File.Copy(FilePath, backup, true);
             }
             catch
             {

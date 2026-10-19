@@ -10,3 +10,7 @@ obj/
 # 本地测试产物
 tools/shots/
 *.user
+
+# 由 build.ps1 根据 version.txt 生成
+src/VersionInfo.cs
+installer/VersionInfo.cs

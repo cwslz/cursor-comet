@@ -23,7 +23,7 @@ namespace MouseTrail
             MaximizeBox = false;
             MinimizeBox = false;
             Text = title;
-            BackColor = MaterialColors.ErrorContainer;
+            BackColor = FluentColors.ErrorContainer;
             Opacity = 0.96;
             DoubleBuffered = true;
             ClientSize = new Size((int)(440 * _scale), (int)(200 * _scale));
@@ -36,7 +36,7 @@ namespace MouseTrail
             icon.UiScale = _scale * 1.7f;
             icon.Width = iconSize;
             icon.Height = iconSize;
-            icon.BackColor = MaterialColors.ErrorContainer;
+            icon.BackColor = FluentColors.ErrorContainer;
             icon.Cursor = Cursors.Default;
             icon.TabStop = false;
             icon.Location = new Point(pad, pad);
@@ -48,8 +48,8 @@ namespace MouseTrail
             titleLabel.Text = title;
             titleLabel.AutoSize = true;
             titleLabel.Font = FluentFonts.Create(16f, FontStyle.Bold);
-            titleLabel.ForeColor = MaterialColors.Error;
-            titleLabel.BackColor = MaterialColors.ErrorContainer;
+            titleLabel.ForeColor = FluentColors.Error;
+            titleLabel.BackColor = FluentColors.ErrorContainer;
             titleLabel.Location = new Point(textLeft, pad - (int)(2 * _scale));
             Controls.Add(titleLabel);
 
@@ -58,16 +58,16 @@ namespace MouseTrail
             messageLabel.AutoSize = true;
             messageLabel.MaximumSize = new Size(ClientSize.Width - textLeft - pad, 0);
             messageLabel.Font = FluentFonts.Create(10f, FontStyle.Regular);
-            messageLabel.ForeColor = MaterialColors.OnSurface;
-            messageLabel.BackColor = MaterialColors.ErrorContainer;
+            messageLabel.ForeColor = FluentColors.OnSurface;
+            messageLabel.BackColor = FluentColors.ErrorContainer;
             messageLabel.Location = new Point(textLeft, pad + (int)(32 * _scale));
             Controls.Add(messageLabel);
 
-            MaterialButton confirm = new MaterialButton();
+            FluentButton confirm = new FluentButton();
             confirm.Text = confirmText;
-            confirm.FillColor = MaterialColors.Error;
+            confirm.FillColor = FluentColors.Error;
             confirm.TextColor = Color.White;
-            confirm.BorderColor = MaterialColors.Error;
+            confirm.BorderColor = FluentColors.Error;
             confirm.Height = (int)(34 * _scale);
             confirm.Font = FluentFonts.Create(10f, FontStyle.Bold);
             confirm.Margin = new Padding((int)(10 * _scale), 0, 0, 0);
@@ -82,12 +82,12 @@ namespace MouseTrail
             cancel.Text = cancelText;
             cancel.FlatStyle = FlatStyle.Flat;
             cancel.FlatAppearance.BorderSize = 1;
-            cancel.FlatAppearance.BorderColor = MaterialColors.Stroke;
-            cancel.FlatAppearance.MouseOverBackColor = MaterialColors.SubtleHover;
-            cancel.FlatAppearance.MouseDownBackColor = MaterialColors.SubtlePressed;
+            cancel.FlatAppearance.BorderColor = FluentColors.Stroke;
+            cancel.FlatAppearance.MouseOverBackColor = FluentColors.SubtleHover;
+            cancel.FlatAppearance.MouseDownBackColor = FluentColors.SubtlePressed;
             cancel.BackColor = Color.White;
             cancel.UseVisualStyleBackColor = false;
-            cancel.ForeColor = MaterialColors.OnSurface;
+            cancel.ForeColor = FluentColors.OnSurface;
             cancel.Height = (int)(34 * _scale);
             cancel.AutoSize = true;
             cancel.MinimumSize = new Size((int)(84 * _scale), (int)(30 * _scale));
@@ -98,7 +98,7 @@ namespace MouseTrail
             _cancel = cancel;
             cancel.Resize += delegate
             {
-                using (GraphicsPath cancelPath = MaterialDraw.RoundRect(
+                using (GraphicsPath cancelPath = FluentDraw.RoundRect(
                     new Rectangle(0, 0, cancel.Width, cancel.Height), (int)(4 * _scale)))
                 {
                     cancel.Region = new Region(cancelPath);
@@ -116,7 +116,7 @@ namespace MouseTrail
             actions.Height = (int)(42 * _scale);
             actions.FlowDirection = FlowDirection.RightToLeft;
             actions.WrapContents = false;
-            actions.BackColor = MaterialColors.ErrorContainer;
+            actions.BackColor = FluentColors.ErrorContainer;
             actions.Padding = new Padding(0);
             actions.Controls.Add(confirm);
             actions.Controls.Add(cancel);
@@ -126,7 +126,7 @@ namespace MouseTrail
             CancelButton = cancel;
             ActiveControl = confirm;
 
-            using (GraphicsPath path = MaterialDraw.RoundRect(
+            using (GraphicsPath path = FluentDraw.RoundRect(
                 new Rectangle(0, 0, Width, Height), (int)(8 * _scale)))
             {
                 Region = new Region(path);
@@ -140,7 +140,7 @@ namespace MouseTrail
             {
                 return;
             }
-            using (GraphicsPath path = MaterialDraw.RoundRect(
+            using (GraphicsPath path = FluentDraw.RoundRect(
                 new Rectangle(0, 0, _cancel.Width, _cancel.Height), (int)(4 * _scale)))
             {
                 _cancel.Region = new Region(path);
@@ -151,9 +151,9 @@ namespace MouseTrail
         {
             base.OnPaint(e);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using (GraphicsPath path = MaterialDraw.RoundRect(
+            using (GraphicsPath path = FluentDraw.RoundRect(
                 new Rectangle(0, 0, Width - 1, Height - 1), (int)(8 * _scale)))
-            using (Pen pen = new Pen(MaterialColors.Error, Math.Max(1.5f, 1.6f * _scale)))
+            using (Pen pen = new Pen(FluentColors.Error, Math.Max(1.5f, 1.6f * _scale)))
             {
                 e.Graphics.DrawPath(pen, path);
             }
@@ -162,7 +162,7 @@ namespace MouseTrail
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            using (GraphicsPath path = MaterialDraw.RoundRect(
+            using (GraphicsPath path = FluentDraw.RoundRect(
                 new Rectangle(0, 0, Width, Height), (int)(8 * _scale)))
             {
                 Region = new Region(path);

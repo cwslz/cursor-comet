@@ -125,11 +125,5 @@ namespace MouseTrail
 
         [DllImport("user32.dll")]
         public static extern bool DestroyIcon(IntPtr hIcon);
-
-        [DllImport("winmm.dll")]
-        public static extern uint timeBeginPeriod(uint uPeriod);
-
-        [DllImport("winmm.dll")]
-        public static extern uint timeEndPeriod(uint uPeriod);
     }
 }
