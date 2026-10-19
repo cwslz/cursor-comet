@@ -21,6 +21,17 @@ namespace MouseTrail
         public bool ShowTip = true;
         public string Language = "auto";
 
+        public double CometGlow = 1.0;
+        public double RainbowSpeed = 0.85;
+        public double RainbowSaturation = 0.92;
+        public double RainbowOffset = 0.0;
+        public double SparkRate = 1.0;
+        public double SparkSize = 1.0;
+        public double SparkLife = 1.0;
+        public double SparkSpeed = 1.0;
+        public double MinimalWidth = 1.0;
+        public double MinimalOpacity = 1.0;
+
         public static string Folder
         {
             get
@@ -40,6 +51,16 @@ namespace MouseTrail
             ColorName = DefaultColor;
             Scale = DefaultScale;
             Life = DefaultLife;
+            CometGlow = 1.0;
+            RainbowSpeed = 0.85;
+            RainbowSaturation = 0.92;
+            RainbowOffset = 0.0;
+            SparkRate = 1.0;
+            SparkSize = 1.0;
+            SparkLife = 1.0;
+            SparkSpeed = 1.0;
+            MinimalWidth = 1.0;
+            MinimalOpacity = 1.0;
         }
 
         public string ResolveLanguage()
@@ -120,6 +141,46 @@ namespace MouseTrail
                     {
                         settings.Language = val;
                     }
+                    else if (key == "cometglow")
+                    {
+                        settings.CometGlow = ParseDouble(val, settings.CometGlow);
+                    }
+                    else if (key == "rainbowspeed")
+                    {
+                        settings.RainbowSpeed = ParseDouble(val, settings.RainbowSpeed);
+                    }
+                    else if (key == "rainbowsat")
+                    {
+                        settings.RainbowSaturation = ParseDouble(val, settings.RainbowSaturation);
+                    }
+                    else if (key == "rainbowoffset")
+                    {
+                        settings.RainbowOffset = ParseDouble(val, settings.RainbowOffset);
+                    }
+                    else if (key == "sparkrate")
+                    {
+                        settings.SparkRate = ParseDouble(val, settings.SparkRate);
+                    }
+                    else if (key == "sparksize")
+                    {
+                        settings.SparkSize = ParseDouble(val, settings.SparkSize);
+                    }
+                    else if (key == "sparklife")
+                    {
+                        settings.SparkLife = ParseDouble(val, settings.SparkLife);
+                    }
+                    else if (key == "sparkspeed")
+                    {
+                        settings.SparkSpeed = ParseDouble(val, settings.SparkSpeed);
+                    }
+                    else if (key == "minimalwidth")
+                    {
+                        settings.MinimalWidth = ParseDouble(val, settings.MinimalWidth);
+                    }
+                    else if (key == "minimalopacity")
+                    {
+                        settings.MinimalOpacity = ParseDouble(val, settings.MinimalOpacity);
+                    }
                 }
             }
             catch
@@ -147,7 +208,24 @@ namespace MouseTrail
             {
                 settings.Scale = 2f;
             }
+            settings.CometGlow = ClampDouble(settings.CometGlow, 0.0, 1.5);
+            settings.RainbowSpeed = ClampDouble(settings.RainbowSpeed, 0.1, 2.0);
+            settings.RainbowSaturation = ClampDouble(settings.RainbowSaturation, 0.2, 1.0);
+            settings.RainbowOffset = ClampDouble(settings.RainbowOffset, 0.0, 1.0);
+            settings.SparkRate = ClampDouble(settings.SparkRate, 0.2, 2.0);
+            settings.SparkSize = ClampDouble(settings.SparkSize, 0.5, 2.0);
+            settings.SparkLife = ClampDouble(settings.SparkLife, 0.5, 2.0);
+            settings.SparkSpeed = ClampDouble(settings.SparkSpeed, 0.5, 2.0);
+            settings.MinimalWidth = ClampDouble(settings.MinimalWidth, 0.5, 2.0);
+            settings.MinimalOpacity = ClampDouble(settings.MinimalOpacity, 0.3, 1.0);
             return settings;
+        }
+
+        private static double ClampDouble(double value, double min, double max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
         }
 
         public void Save()
@@ -167,6 +245,17 @@ namespace MouseTrail
                 sb.AppendLine("showtip=" + (ShowTip ? "1" : "0"));
                 sb.AppendLine("# 语言 / Language: auto / zh / en");
                 sb.AppendLine("lang=" + Language);
+                sb.AppendLine("# 特效参数 / Style parameters");
+                sb.AppendLine("cometglow=" + CometGlow.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("rainbowspeed=" + RainbowSpeed.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("rainbowsat=" + RainbowSaturation.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("rainbowoffset=" + RainbowOffset.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("sparkrate=" + SparkRate.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("sparksize=" + SparkSize.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("sparklife=" + SparkLife.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("sparkspeed=" + SparkSpeed.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("minimalwidth=" + MinimalWidth.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("minimalopacity=" + MinimalOpacity.ToString("0.###", CultureInfo.InvariantCulture));
 
                 string tmp = FilePath + ".tmp";
                 File.WriteAllText(tmp, sb.ToString(), new UTF8Encoding(false));

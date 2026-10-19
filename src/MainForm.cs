@@ -22,7 +22,7 @@ namespace MouseTrail
         }
 
         private const string RepoUrl = "https://github.com/cwslz/cursor-comet";
-        private const string AppVersion = "1.6.0";
+        private const string AppVersion = "1.6.1";
 
         private readonly AppSettings _cfg;
         private readonly Action<bool> _changed;
@@ -490,6 +490,132 @@ namespace MouseTrail
                 L10n.T("干净的单线轨迹", "Clean thin line"));
             AddCard(L10n.T("样式", "Style"), L10n.T("选择拖尾的渲染方式。",
                 "Choose how the trail is rendered."), styles);
+            BuildStyleParametersCard();
+        }
+
+        private void BuildStyleParametersCard()
+        {
+            TableLayoutPanel content = new TableLayoutPanel();
+            content.AutoSize = true;
+            content.Dock = DockStyle.Top;
+            content.ColumnCount = 1;
+            content.RowCount = 0;
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            content.BackColor = MaterialColors.SurfaceContainer;
+
+            switch (_cfg.Style)
+            {
+                case "comet":
+                    AddParamRow(content, L10n.T("光晕", "Glow"), 0.0, 1.5, 0.05, _cfg.CometGlow,
+                        delegate(double v) { return v.ToString("0.00") + "×"; },
+                        delegate(double v) { _cfg.CometGlow = v; });
+                    break;
+                case "rainbow":
+                    AddRainbowRows(content);
+                    break;
+                case "sparks":
+                    AddParamRow(content, L10n.T("密度", "Rate"), 0.2, 2.0, 0.05, _cfg.SparkRate,
+                        delegate(double v) { return v.ToString("0.00") + "×"; },
+                        delegate(double v) { _cfg.SparkRate = v; });
+                    AddParamRow(content, L10n.T("大小", "Size"), 0.5, 2.0, 0.05, _cfg.SparkSize,
+                        delegate(double v) { return v.ToString("0.00") + "×"; },
+                        delegate(double v) { _cfg.SparkSize = v; });
+                    AddParamRow(content, L10n.T("寿命", "Life"), 0.5, 2.0, 0.05, _cfg.SparkLife,
+                        delegate(double v) { return v.ToString("0.00") + "×"; },
+                        delegate(double v) { _cfg.SparkLife = v; });
+                    AddParamRow(content, L10n.T("速度", "Speed"), 0.5, 2.0, 0.05, _cfg.SparkSpeed,
+                        delegate(double v) { return v.ToString("0.00") + "×"; },
+                        delegate(double v) { _cfg.SparkSpeed = v; });
+                    break;
+                case "minimal":
+                    AddParamRow(content, L10n.T("线宽", "Width"), 0.5, 2.0, 0.05, _cfg.MinimalWidth,
+                        delegate(double v) { return v.ToString("0.00") + "×"; },
+                        delegate(double v) { _cfg.MinimalWidth = v; });
+                    AddParamRow(content, L10n.T("不透明度", "Opacity"), 0.3, 1.0, 0.05, _cfg.MinimalOpacity,
+                        delegate(double v) { return Math.Round(v * 100) + "%"; },
+                        delegate(double v) { _cfg.MinimalOpacity = v; });
+                    break;
+            }
+
+            AddCard(L10n.T("样式参数", "Style parameters"),
+                L10n.T("调整当前样式的特效。", "Tune the effects of the current style."), content);
+        }
+
+        private void AddRainbowRows(TableLayoutPanel host)
+        {
+            AddParamRow(host, L10n.T("流速", "Speed"), 0.1, 2.0, 0.05, _cfg.RainbowSpeed,
+                delegate(double v) { return v.ToString("0.00") + "×"; },
+                delegate(double v) { _cfg.RainbowSpeed = v; });
+            AddParamRow(host, L10n.T("饱和度", "Saturation"), 0.2, 1.0, 0.05, _cfg.RainbowSaturation,
+                delegate(double v) { return Math.Round(v * 100) + "%"; },
+                delegate(double v) { _cfg.RainbowSaturation = v; });
+            AddParamRow(host, L10n.T("色相偏移", "Hue offset"), 0.0, 1.0, 0.01, _cfg.RainbowOffset,
+                delegate(double v) { return v.ToString("0.00"); },
+                delegate(double v) { _cfg.RainbowOffset = v; });
+        }
+
+        private void AddParamRow(TableLayoutPanel host, string label, double min, double max,
+            double step, double value, Func<double, string> format, Action<double> apply)
+        {
+            TableLayoutPanel row = new TableLayoutPanel();
+            row.AutoSize = true;
+            row.Dock = DockStyle.Top;
+            row.ColumnCount = 3;
+            row.RowCount = 1;
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            row.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            row.BackColor = MaterialColors.SurfaceContainer;
+            row.Margin = new Padding(0, 0, 0, (int)(2 * _dpiScale));
+
+            Label name = new Label();
+            name.AutoSize = true;
+            name.Text = label;
+            name.Font = new Font(Font.FontFamily, 9f);
+            name.ForeColor = MaterialColors.OnSurfaceVariant;
+            name.BackColor = MaterialColors.SurfaceContainer;
+            name.Anchor = AnchorStyles.Left;
+            name.Margin = new Padding(0, (int)(10 * _dpiScale), (int)(12 * _dpiScale), 0);
+            row.Controls.Add(name, 0, 0);
+
+            MaterialSlider slider = new MaterialSlider();
+            slider.Minimum = min;
+            slider.Maximum = max;
+            slider.Step = step;
+            slider.Value = value;
+            slider.UiScale = _dpiScale;
+            slider.Height = (int)(30 * _dpiScale);
+            slider.Dock = DockStyle.Top;
+            slider.Margin = new Padding(0, (int)(4 * _dpiScale), (int)(10 * _dpiScale), 0);
+            row.Controls.Add(slider, 1, 0);
+
+            Label val = new Label();
+            val.AutoSize = true;
+            val.Text = format(value);
+            val.Font = new Font(Font.FontFamily, 10.5f, FontStyle.Bold);
+            val.ForeColor = MaterialColors.Primary;
+            val.BackColor = MaterialColors.SurfaceContainer;
+            val.Anchor = AnchorStyles.Right;
+            val.TextAlign = ContentAlignment.MiddleRight;
+            val.Margin = new Padding(0, (int)(7 * _dpiScale), 0, 0);
+            row.Controls.Add(val, 2, 0);
+
+            slider.ValueChanged += delegate
+            {
+                if (_loading)
+                {
+                    return;
+                }
+                apply(slider.Value);
+                val.Text = format(slider.Value);
+                _changed(false);
+            };
+            slider.ValueCommitted += delegate { _cfg.Save(); };
+
+            host.RowCount++;
+            host.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            host.Controls.Add(row, 0, host.RowCount - 1);
         }
 
         private void AddStyleCard(FlowLayoutPanel host, string key, string title, string subtitle)
@@ -515,10 +641,44 @@ namespace MouseTrail
             host.Controls.Add(card);
         }
 
+        private void BuildRainbowColorCard()
+        {
+            TableLayoutPanel content = new TableLayoutPanel();
+            content.AutoSize = true;
+            content.Dock = DockStyle.Top;
+            content.ColumnCount = 1;
+            content.RowCount = 0;
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            content.BackColor = MaterialColors.SurfaceContainer;
+
+            Label note = new Label();
+            note.AutoSize = true;
+            note.Text = L10n.T("彩虹模式使用 HSV 循环，下面的颜色色板不参与渲染。",
+                "Rainbow mode uses an HSV cycle; the color palette below is not used.");
+            note.MaximumSize = new Size((int)(720 * _dpiScale), 0);
+            note.ForeColor = MaterialColors.OnSurfaceVariant;
+            note.BackColor = MaterialColors.SurfaceContainer;
+            note.Font = new Font(Font.FontFamily, 8.5f);
+            note.Margin = new Padding(0, 0, 0, (int)(8 * _dpiScale));
+            content.RowCount++;
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.Controls.Add(note, 0, content.RowCount - 1);
+
+            AddRainbowRows(content);
+            AddCard(L10n.T("彩虹参数", "Rainbow settings"),
+                L10n.T("调整彩虹的流速、饱和度和色相偏移。",
+                    "Adjust the rainbow speed, saturation and hue offset."), content);
+        }
+
         private void BuildColorCards()
         {
-            FlowLayoutPanel flow = new FlowLayoutPanel();
-            flow.AutoSize = true;
+            if (_cfg.Style == "rainbow")
+            {
+                BuildRainbowColorCard();
+                return;
+            }
+
+            FlowLayoutPanel flow = new FlowLayoutPanel();            flow.AutoSize = true;
             flow.Dock = DockStyle.Top;
             flow.WrapContents = true;
             flow.BackColor = MaterialColors.SurfaceContainer;
@@ -1031,8 +1191,14 @@ namespace MouseTrail
             }
         }
 
-        private static string SectionSubtitle(Section section)
+        private string SectionSubtitle(Section section)
         {
+            if (section == Section.Color && _cfg.Style == "rainbow")
+            {
+                return L10n.T("彩虹模式使用 HSV 循环，参数在下面调整。",
+                    "Rainbow mode uses an HSV cycle; adjust its settings below.");
+            }
+
             switch (section)
             {
                 case Section.Appearance:

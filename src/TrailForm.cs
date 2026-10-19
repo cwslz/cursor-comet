@@ -544,6 +544,10 @@ namespace MouseTrail
             SyncChoices(_sizeMenu, _cfg.Scale.ToString("0.###", CultureInfo.InvariantCulture));
             SyncChoices(_lifeMenu, _cfg.Life.ToString("0.##", CultureInfo.InvariantCulture));
             SyncChoices(_languageMenu, _cfg.Language);
+            if (_colorMenu != null)
+            {
+                _colorMenu.Enabled = _cfg.Style != "rainbow";
+            }
             _autoStartItem.Checked = AutoStart.IsEnabled();
         }
 
@@ -587,7 +591,7 @@ namespace MouseTrail
 
         private void ShowAbout()
         {
-            string text = L10n.T("鼠标拖尾 v1.6.0", "Cursor Comet v1.6.0") + Environment.NewLine + Environment.NewLine;
+            string text = L10n.T("鼠标拖尾 v1.6.1", "Cursor Comet v1.6.1") + Environment.NewLine + Environment.NewLine;
             text += L10n.T("Ctrl + Alt + T  开关特效", "Ctrl + Alt + T  Toggle the effect") + Environment.NewLine;
             text += L10n.T("右键（或左键）托盘图标可以切换样式、颜色、粗细和时长。",
                 "Click or right-click the tray icon to change style, color, thickness and duration.") +

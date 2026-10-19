@@ -53,7 +53,7 @@ The tray menu can change:
 
 - **Material You settings window**: open it from the tray menu or by double-clicking the tray icon; sidebar sections on the left, cards on the right, freely resizable
 - **Bilingual UI**: switch language in the tray menu, installer and uninstaller
-- Portable build is a single exe (~90 KB); the installer is ~175 KB and contains the app plus a standalone `uninstall.exe`
+- Portable build is a single exe (~100 KB); the installer is ~190 KB and contains the app plus a standalone `uninstall.exe`
 - No Python, Node or .NET SDK required; uses the built-in .NET Framework 4.8
 - Per-pixel transparent + click-through (`WS_EX_LAYERED | WS_EX_TRANSPARENT`); normal clicking, dragging and typing are unaffected
 - Full-screen transparent overlay, trail fades by **fixed time**: fast movement makes it longer instead of clipping or breaking
@@ -68,6 +68,19 @@ Open **Open settings** from the tray menu (or double-click the tray icon) to get
 - Right side: card-based settings; the Appearance page can toggle the effect and switch between four styles;
 - The window is freely resizable; on narrow widths the sidebar collapses to icons and the content scrolls;
 - The settings window and the tray menu stay in sync, and language changes apply immediately.
+
+## Style parameters
+
+Settings → Appearance → **Style parameters** adjusts the effects of the current style:
+
+| Style | Parameters |
+| --- | --- |
+| Comet | Glow |
+| Rainbow | Speed, saturation, hue offset |
+| Sparks | Rate, size, life, speed |
+| Minimal | Width, opacity |
+
+In rainbow mode, the Color page switches to a Rainbow settings page; the color palette is not used, and the tray color menu is disabled.
 
 ## Language
 

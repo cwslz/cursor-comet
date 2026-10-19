@@ -33,11 +33,15 @@ namespace MouseTrail
             }
 
             Color headColor = cfg.Style == "rainbow"
-                ? Palette.Hsv(now * 0.12, 0.85, 1.0)
+                ? Palette.Hsv((now * cfg.RainbowSpeed * 0.14 + cfg.RainbowOffset) % 1.0,
+                    cfg.RainbowSaturation, 1.0)
                 : baseColor;
             if (headFade > 0.01f)
             {
-                DrawHeadGlow(g, headX, headY, headColor, cfg.Scale * dpiScale, headFade);
+                float headGlow = cfg.Style == "comet"
+                    ? (float)cfg.CometGlow
+                    : (cfg.Style == "minimal" ? (float)cfg.MinimalOpacity : 1f);
+                DrawHeadGlow(g, headX, headY, headColor, cfg.Scale * dpiScale * headGlow, headFade);
             }
 
             if (cfg.Style == "sparks")
@@ -53,7 +57,7 @@ namespace MouseTrail
 
             bool rainbow = cfg.Style == "rainbow";
             bool minimal = cfg.Style == "minimal";
-            float maxR = (minimal ? 1.35f : MaxRadius) * cfg.Scale * dpiScale;
+            float maxR = (minimal ? 1.35f * (float)cfg.MinimalWidth : MaxRadius) * cfg.Scale * dpiScale;
             float minSpacing = (minimal ? 1.0f : StampSpacing) * dpiScale;
 
             List<TrailPoint> group = new List<TrailPoint>(samples.Count);
@@ -85,6 +89,9 @@ namespace MouseTrail
                 return;
             }
 
+            float glow = (float)cfg.CometGlow;
+            float opacity = minimal ? (float)cfg.MinimalOpacity : 1f;
+
             if (group.Count == 1)
             {
                 TrailPoint single = group[0];
@@ -95,7 +102,7 @@ namespace MouseTrail
                 }
 
                 float r = maxR * (float)Math.Pow(f, 0.7);
-                int a = (int)(225f * (float)Math.Pow(f, 1.2));
+                int a = (int)(225f * (float)Math.Pow(f, 1.2) * opacity);
                 if (r < 0.5f || a < 2)
                 {
                     return;
@@ -127,7 +134,7 @@ namespace MouseTrail
                 TrailPoint only = dense[0];
                 float onlyFade = Fade(now, only.T, cfg.Life);
                 float onlyRadius = maxR * (float)Math.Pow(onlyFade, 0.62);
-                int onlyAlpha = (int)(228f * (float)Math.Pow(onlyFade, 1.15));
+                int onlyAlpha = (int)(228f * (float)Math.Pow(onlyFade, 1.15) * opacity);
                 if (onlyRadius >= 0.4f && onlyAlpha >= 2)
                 {
                     using (SolidBrush dot = new SolidBrush(Color.FromArgb(onlyAlpha, baseColor)))
@@ -158,7 +165,7 @@ namespace MouseTrail
                     }
 
                     float r = maxR * (float)Math.Pow(f, 0.62);
-                    float a = 228f * (float)Math.Pow(f, 1.15);
+                    float a = 228f * (float)Math.Pow(f, 1.15) * opacity;
                     if (r < 0.4f || a < 1.2f)
                     {
                         continue;
@@ -167,7 +174,8 @@ namespace MouseTrail
                     Color color;
                     if (rainbow)
                     {
-                        color = Palette.Hsv((a1.T * 0.85) % 1.0, 0.92, 1.0);
+                        color = Palette.Hsv((a1.T * cfg.RainbowSpeed + cfg.RainbowOffset) % 1.0,
+                            cfg.RainbowSaturation, 1.0);
                     }
                     else
                     {
@@ -176,10 +184,10 @@ namespace MouseTrail
 
                     if (!minimal)
                     {
-                        int haloAlpha = (int)(a * 0.065f);
+                        int haloAlpha = (int)(a * 0.065f * glow);
                         if (haloAlpha > 0)
                         {
-                            pen.Width = r * 4.8f;
+                            pen.Width = r * 4.8f * glow;
                             pen.Color = Color.FromArgb(haloAlpha, color);
                             g.DrawLine(pen, a0.X, a0.Y, a1.X, a1.Y);
                         }
@@ -192,7 +200,7 @@ namespace MouseTrail
                     if (!minimal && f > 0.30f)
                     {
                         pen.Width = r * 0.6f;
-                        pen.Color = Color.FromArgb((int)(a * 0.32f), 255, 255, 255);
+                        pen.Color = Color.FromArgb((int)(a * 0.32f * glow), 255, 255, 255);
                         g.DrawLine(pen, a0.X, a0.Y, a1.X, a1.Y);
                     }
                 }
@@ -227,7 +235,7 @@ namespace MouseTrail
                         continue;
                     }
 
-                    Color color = Palette.Hsv(s.Hue, 0.90, 1.0);
+                    Color color = Palette.Hsv(s.Hue, s.Sat, s.Val);
 
                     float glowR = r * 2.6f;
                     brush.Color = Color.FromArgb(a / 3, color);

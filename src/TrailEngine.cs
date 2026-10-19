@@ -24,6 +24,8 @@ namespace MouseTrail
             public double MaxLife;
             public float Size;
             public float Hue;
+            public float Sat;
+            public float Val;
         }
 
         private const int MaxSamples = 800;
@@ -145,7 +147,7 @@ namespace MouseTrail
         private void SpawnSparks(float x, float y, double dt, AppSettings cfg, float dpiScale)
         {
             float speed = (float)Math.Sqrt(VelocityX * VelocityX + VelocityY * VelocityY);
-            _sparkAccum += (float)dt * (40f + Math.Min(180f, speed * 0.12f));
+            _sparkAccum += (float)dt * (40f + Math.Min(180f, speed * 0.12f)) * (float)cfg.SparkRate;
 
             int count = (int)_sparkAccum;
             if (count <= 0)
@@ -166,17 +168,19 @@ namespace MouseTrail
             for (int i = 0; i < count; i++)
             {
                 double angle = _rng.NextDouble() * Math.PI * 2.0;
-                double speedRand = 18.0 + _rng.NextDouble() * 70.0;
+                double speedRand = (18.0 + _rng.NextDouble() * 70.0) * cfg.SparkSpeed;
 
                 Spark s = new Spark();
                 s.X = x + (float)(_rng.NextDouble() * 6.0 - 3.0);
                 s.Y = y + (float)(_rng.NextDouble() * 6.0 - 3.0);
                 s.VX = -(VelocityX * 0.05f) + (float)(Math.Cos(angle) * speedRand);
                 s.VY = -(VelocityY * 0.05f) + (float)(Math.Sin(angle) * speedRand);
-                s.MaxLife = 0.45 + _rng.NextDouble() * 0.50;
+                s.MaxLife = (0.45 + _rng.NextDouble() * 0.50) * cfg.SparkLife;
                 s.Life = s.MaxLife;
-                s.Size = (2.2f + (float)_rng.NextDouble() * 2.8f) * cfg.Scale * dpiScale;
+                s.Size = (2.2f + (float)_rng.NextDouble() * 2.8f) * cfg.Scale * dpiScale * (float)cfg.SparkSize;
                 s.Hue = (float)(baseHue + (_rng.NextDouble() - 0.5) * 0.14);
+                s.Sat = (float)baseSat;
+                s.Val = (float)baseVal;
                 _sparks.Add(s);
             }
 
