@@ -147,9 +147,15 @@ namespace CursorComet
 
         public static AppSettings Load()
         {
+            return Load(true);
+        }
+
+        private static AppSettings Load(bool allowBackup)
+        {
             AppSettings settings = new AppSettings();
             bool hasLife = false;
             int legacyLength = -1;
+            int validKeys = 0;
 
             EnsureMigrated();
             string path = File.Exists(FilePath) ? FilePath : (File.Exists(LegacyFilePath) ? LegacyFilePath : FilePath);
@@ -177,6 +183,10 @@ namespace CursorComet
 
                     string key = line.Substring(0, eq).Trim().ToLowerInvariant();
                     string val = line.Substring(eq + 1).Trim();
+                    if (IsKnownKey(key))
+                    {
+                        validKeys++;
+                    }
 
                     if (key == "style" && IsKnownStyle(val))
                     {
@@ -294,6 +304,15 @@ namespace CursorComet
             {
                 TryBackupCorruptConfig(path);
                 Program.Log(ex);
+                if (allowBackup && TryRestoreBackup(path))
+                {
+                    return Load(false);
+                }
+            }
+
+            if (validKeys == 0 && allowBackup && TryRestoreBackup(path))
+            {
+                return Load(false);
             }
 
             if (!hasLife && legacyLength > 0)
@@ -402,6 +421,59 @@ namespace CursorComet
             catch (Exception ex)
             {
                 Program.Log(ex);
+            }
+        }
+
+        private static bool TryRestoreBackup(string path)
+        {
+            if (path != FilePath || !File.Exists(FilePath + ".bak"))
+            {
+                return false;
+            }
+            try
+            {
+                File.Copy(FilePath + ".bak", FilePath, true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Program.Log(ex);
+                return false;
+            }
+        }
+
+        private static bool IsKnownKey(string key)
+        {
+            switch (key)
+            {
+                case "style":
+                case "color":
+                case "scale":
+                case "life":
+                case "enabled":
+                case "showtip":
+                case "lang":
+                case "glowenabled":
+                case "glowstrength":
+                case "glowradius":
+                case "glowcolor":
+                case "haloenabled":
+                case "haloradius":
+                case "halothickness":
+                case "haloopacity":
+                case "halocolor":
+                case "rainbowspeed":
+                case "rainbowsat":
+                case "rainbowoffset":
+                case "sparkrate":
+                case "sparksize":
+                case "sparklife":
+                case "sparkspeed":
+                case "minimalwidth":
+                case "minimalopacity":
+                    return true;
+                default:
+                    return false;
             }
         }
 

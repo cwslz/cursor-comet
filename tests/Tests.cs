@@ -31,6 +31,7 @@ namespace CursorComet.Tests
                 PaletteNames();
                 SaveFailureKeepsOldConfig();
                 CorruptLoadFallsBackAndLogs();
+                CorruptMainRestoresFromBak();
                 ConfigMigration();
             }
             finally
@@ -136,6 +137,13 @@ namespace CursorComet.Tests
 
         private static void CorruptLoadFallsBackAndLogs()
         {
+            try
+            {
+                File.Delete(AppSettings.FilePath + ".bak");
+            }
+            catch
+            {
+            }
             File.WriteAllText(AppSettings.FilePath, "style=rainbow\nlife=0.9\n", new UTF8Encoding(false));
             using (FileStream fs = new FileStream(AppSettings.FilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
@@ -143,6 +151,34 @@ namespace CursorComet.Tests
                 Check(loaded.Style == AppSettings.DefaultStyle, "config: unreadable file falls back to defaults");
             }
             Check(File.Exists(Path.Combine(AppSettings.Folder, "error.log")), "config: load failure logged");
+        }
+
+        private static void CorruptMainRestoresFromBak()
+        {
+            try
+            {
+                File.Delete(AppSettings.FilePath);
+            }
+            catch
+            {
+            }
+            try
+            {
+                File.Delete(AppSettings.FilePath + ".bak");
+            }
+            catch
+            {
+            }
+
+            AppSettings first = new AppSettings();
+            first.ColorName = "gold";
+            first.Save();
+            first.ColorName = "pink";
+            first.Save();
+
+            File.WriteAllText(AppSettings.FilePath, "not a valid ini", new UTF8Encoding(false));
+            AppSettings loaded = AppSettings.Load();
+            Check(loaded.ColorName == "gold", "config: corrupt main restores from .bak");
         }
 
         private static void ConfigMigration()
