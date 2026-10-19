@@ -64,8 +64,9 @@ The tray menu can change:
 
 Open **Open settings** from the tray menu (or double-click the tray icon) to get the Material You settings window:
 
-- Left sidebar: Appearance, Color, Thickness, Duration, Behavior, Language; About and GitHub at the bottom;
-- Right side: card-based settings; the Appearance page can toggle the effect and switch between four styles;
+- Left sidebar: Appearance, Color, Behavior, Language; About and GitHub at the bottom; thickness and duration live in Appearance → Thickness and duration;
+- Right side: card-based settings; the Appearance page can toggle the effect, switch between four styles and tune style parameters;
+- In rainbow mode the Color page only shows guidance; rainbow settings live in Appearance → Style parameters;
 - The window is freely resizable; on narrow widths the sidebar collapses to icons and the content scrolls;
 - The settings window and the tray menu stay in sync, and language changes apply immediately.
 
