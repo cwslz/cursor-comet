@@ -4,6 +4,8 @@
 
 一个轻量的 Windows 鼠标轨迹特效小工具：透明覆盖层跟随鼠标，画出带光晕的拖尾，**不挡点击、不抢焦点**。
 
+> **预览版 / Preview**：1.x 为开发预览，功能和配置格式可能变化；2.0 前不建议作为日常唯一版本。反馈请附 Windows 版本、缩放比例和 `%APPDATA%\MouseTrail\error.log`。
+
 [![build](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml/badge.svg)](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/cwslz/cursor-comet)](https://github.com/cwslz/cursor-comet/releases/latest)
 [![license](https://img.shields.io/github/license/cwslz/cursor-comet)](LICENSE)
@@ -242,7 +244,7 @@ cursor-comet/
 ## 版本策略
 
 - 版本号唯一来源是根目录的 `version.txt`，`build.ps1` 自动生成程序与安装器版本，避免多处手改。
-- 只在大里程碑发版，不再为单个修复或外观微调连续发版。当前公开版本为 **1.8.0**，下一个有意义的里程碑是 **2.0.0**（安装器简化、渲染架构和工程化）。
+- 只在大里程碑发版，不再为单个修复或外观微调连续发版。当前公开版本为 **1.8.0**，最新预览为 **1.8.1-preview.1**；1.x 均为开发预览，下一个稳定的里程碑是 **2.0.0**（安装器简化、渲染架构和工程化）。
 - 1.x 的旧发布保留作为开发历史；之后不再把版本号当进度条。
 
 ## 已知限制

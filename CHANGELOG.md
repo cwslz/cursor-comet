@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.8.1-preview.1 — 2026-10-19
+
+### 变更
+
+- 增加 1.x 开发预览说明：功能和配置格式可能变化，2.0 前不建议作为日常唯一版本；反馈需附 Windows 版本、缩放比例和 `%APPDATA%\MouseTrail\error.log`。
+- 内部控件从 `Material*` 统一改名为 `Fluent*`（`FluentUI.cs`），并移除未生效的 Mica/深色设置，只保留 DWM 圆角。
+- 配置保存改为 `File.Replace` 原子替换并保留 `.bak`；读取失败会备份为 `.corrupt-时间戳` 并写入 `error.log`，不再静默覆盖。
+- 主窗口最小尺寸按屏幕工作区收敛；移除关于页 Star 提示。
+- 移除 `timeBeginPeriod(1)`。
+- 版本号唯一来源改为 `version.txt`，`build.ps1` 生成程序和安装器版本；支持 `x.y.z-pre` 预发布版本。
+- README 增加主界面/安装器截图、版本策略和已知限制。
+
 ## v1.8.0 — 2026-10-19
 
 ### 新增

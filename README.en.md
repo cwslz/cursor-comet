@@ -4,6 +4,8 @@
 
 A lightweight Windows cursor trail effect: a transparent overlay follows the mouse and draws a glowing trail — **clicks, drags and typing pass straight through**.
 
+> **Preview**: 1.x is a development preview; features and config format may change. It is not recommended as your only daily-use version before 2.0. When reporting issues, include your Windows version, display scaling, and `%APPDATA%\MouseTrail\error.log`.
+
 [![build](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml/badge.svg)](https://github.com/cwslz/cursor-comet/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/cwslz/cursor-comet)](https://github.com/cwslz/cursor-comet/releases/latest)
 [![license](https://img.shields.io/github/license/cwslz/cursor-comet)](LICENSE)
@@ -231,7 +233,7 @@ Edit the colors in `src\Palette.cs`, or the constants at the top of `src\TrailRe
 ## Versioning
 
 - `version.txt` is the single source of truth; `build.ps1` generates the app and installer versions from it.
-- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**; the next meaningful milestone is **2.0.0** (installer simplification, rendering architecture and engineering work).
+- Releases are for meaningful milestones only, not for every fix or visual tweak. The current public version is **1.8.0**, with **1.8.1-preview.1** as the latest preview; all 1.x versions are development previews, and the next stable milestone is **2.0.0** (installer simplification, rendering architecture and engineering work).
 - Old 1.x releases stay as development history; the version number is no longer a progress bar.
 
 ## Known limitations
